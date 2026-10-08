@@ -1,0 +1,2521 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestor de Projetos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#151a23; --ink-2:#1c222e;
+    --paper:#f6f3ec; --paper-dim:#eae5d8;
+    --line:#d9d2bf; --line-soft:#e5e0d2;
+    --gold:#b5852c; --gold-soft:#e8c98a;
+    --teal:#2f6f6a; --teal-soft:#d6e6e4;
+    --rust:#a8452f; --rust-soft:#f3d9d1;
+    --ok:#3c7a4c; --ok-soft:#dcebdf;
+    --warn:#b5852c; --warn-soft:#f3e6c9;
+    --bad:#a8452f; --bad-soft:#f3d9d1;
+    --muted:#6b6455; --white:#fffdf8;
+    --shadow: 0 1px 2px rgba(21,26,35,.06), 0 8px 24px -12px rgba(21,26,35,.18);
+    --radius: 10px;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'IBM Plex Sans', -apple-system, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:var(--paper);color:var(--ink);font-family:var(--font-body);
+    font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;
+    display:flex;flex-direction:column;
+  }
+  ::selection{background:var(--gold-soft);}
+  a{color:inherit;}
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:inherit;font-size:14px;}
+
+  #app{max-width:1900px;width:100%;margin:0 auto;padding:0 24px 12px;flex:1;display:flex;flex-direction:column;min-height:0;}
+  header.top, nav.tabs, #banner{flex:none;}
+  #tabContent{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden;}
+
+  header.top{padding:28px 0 18px;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:2px solid var(--ink);margin-bottom:22px;}
+  header.top .brand-mark{width:38px;height:38px;border-radius:8px;background:var(--ink);display:flex;align-items:center;justify-content:center;color:var(--paper);font-family:var(--font-display);font-weight:700;font-size:18px;flex:none;}
+  header.top h1{font-family:var(--font-display);font-weight:600;font-size:26px;margin:0;letter-spacing:-.01em;}
+  header.top .head-left{display:flex;gap:12px;align-items:center;}
+  header.top .save-state{font-family:var(--font-mono);font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px;}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--ok);flex:none;}
+  .dot.saving{background:var(--gold);animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+  nav.tabs{display:flex;gap:4px;margin-bottom:22px;border-bottom:1px solid var(--line);overflow-x:auto;}
+  nav.tabs button{background:none;border:none;padding:10px 4px;margin-right:22px;font-size:14.5px;font-weight:600;color:var(--muted);border-bottom:2px solid transparent;position:relative;top:1px;white-space:nowrap;}
+  nav.tabs button .count{font-family:var(--font-mono);font-size:11px;font-weight:500;background:var(--paper-dim);color:var(--muted);padding:1px 6px;border-radius:20px;margin-left:6px;}
+  nav.tabs button.active{color:var(--ink);border-bottom-color:var(--gold);}
+  nav.tabs button.active .count{background:var(--ink);color:var(--paper);}
+  nav.tabs button:hover{color:var(--ink);}
+
+  .banner{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-bottom:22px;}
+  .banner .cell{background:var(--white);padding:14px 16px;}
+  .banner .cell.click{cursor:pointer;}
+  .banner .cell.click:hover{background:#fbf8f1;}
+  .banner .cell .num{font-family:var(--font-display);font-size:26px;font-weight:600;line-height:1;}
+  .banner .cell .lbl{font-size:12px;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:.04em;}
+  .banner .cell.bad .num{color:var(--bad);}
+  .banner .cell.warn .num{color:var(--warn);}
+
+  .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;}
+  .filters select, .filters input[type=text]{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--white);color:var(--ink);font-size:13.5px;min-width:150px;max-width:240px;}
+  .filters .spacer{flex:1;}
+  .filters label.chk{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);}
+  .btn{padding:9px 16px;border-radius:8px;border:1px solid var(--ink);background:var(--ink);color:var(--paper);font-weight:600;font-size:13.5px;display:inline-flex;align-items:center;gap:6px;transition:transform .1s, box-shadow .1s;}
+  .btn:hover{box-shadow:var(--shadow);transform:translateY(-1px);}
+  .btn.ghost{background:transparent;color:var(--ink);border-color:var(--line);font-weight:500;}
+  .btn.ghost:hover{border-color:var(--ink);}
+  .btn.small{padding:5px 10px;font-size:12.5px;}
+  .btn.danger{background:var(--rust);border-color:var(--rust);}
+  .chip-clear{font-size:12.5px;color:var(--muted);text-decoration:underline;background:none;border:none;padding:4px 2px;}
+
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+  .chip{border:1px solid var(--line);background:var(--white);border-radius:20px;padding:5px 11px;font-size:12.5px;font-weight:600;color:var(--ink);}
+  .chip .n{font-family:var(--font-mono);margin-left:5px;opacity:.6;font-weight:500;}
+  .chip.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .chip.acomp{border-color:var(--gold);}
+
+  .bulk-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--ink);color:var(--paper);padding:10px 14px;border-radius:9px;margin-bottom:14px;font-size:13px;}
+  .bulk-bar .count{font-weight:700;font-family:var(--font-mono);}
+  .bulk-bar .spacer{flex:1;}
+  .bulk-bar button{padding:6px 12px;border-radius:6px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.08);color:var(--paper);font-size:12.5px;font-weight:600;}
+  .bulk-bar button:hover{background:rgba(255,255,255,.18);}
+  .bulk-bar button.danger{background:var(--rust);border-color:var(--rust);}
+  .unread-dot{width:7px;height:7px;border-radius:50%;background:var(--gold);display:inline-block;margin-right:6px;flex:none;}
+
+  .tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;}
+  .tbl{width:100%;border-collapse:collapse;font-size:13px;background:var(--white);}
+  .tbl th{position:sticky;top:0;background:var(--paper-dim);text-align:left;padding:10px 12px;z-index:1;font-weight:600;white-space:nowrap;}
+  .tbl td{padding:9px 12px;border-top:1px solid var(--line-soft);vertical-align:middle;}
+  .tbl tr.click{cursor:pointer;}
+  .tbl tr.click:hover td{background:#fbf8f1;}
+  .mono{font-family:var(--font-mono);}
+  .muted{color:var(--muted);}
+  .small{font-size:12px;}
+
+  .board{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:start;}
+  .col{background:var(--paper-dim);border-radius:var(--radius);padding:10px;min-height:80px;}
+  .col-head{display:flex;justify-content:space-between;align-items:center;padding:4px 6px 10px;}
+  .col-head h3{margin:0;font-size:13px;text-transform:uppercase;letter-spacing:.05em;font-weight:700;color:var(--muted);}
+  .col-head .n{font-family:var(--font-mono);font-size:12px;color:var(--muted);}
+  .card{background:var(--white);border:1px solid var(--line-soft);border-radius:9px;padding:12px 13px;margin-bottom:9px;cursor:pointer;transition:box-shadow .12s, transform .12s;border-left:4px solid var(--inst-color, var(--ink));}
+  .card:hover{box-shadow:var(--shadow);transform:translateY(-1px);}
+  .card .tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px;}
+  .tag{font-family:var(--font-mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;padding:2px 7px;border-radius:20px;background:var(--paper-dim);color:var(--ink);font-weight:600;}
+  .tag.type{background:var(--ink);color:var(--paper);}
+  .card h4{margin:0 0 6px;font-size:14px;line-height:1.3;}
+  .card .meta{display:flex;justify-content:space-between;align-items:center;margin-top:9px;font-size:12px;color:var(--muted);}
+  .card .who{display:flex;align-items:center;gap:5px;}
+  .avatar{width:20px;height:20px;border-radius:50%;background:var(--ink);color:var(--paper);display:inline-flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:700;flex:none;font-family:var(--font-mono);}
+  .due{font-family:var(--font-mono);font-weight:600;}
+  .due.overdue{color:var(--bad);}
+  .due.soon{color:var(--warn);}
+  .empty-col{padding:20px 8px;text-align:center;color:var(--muted);font-size:12.5px;}
+
+  .inst-block{margin-bottom:20px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--white);}
+  .inst-head{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--paper-dim);border-bottom:1px solid var(--line);flex-wrap:wrap;}
+  .inst-swatch{width:10px;height:10px;border-radius:3px;flex:none;}
+  .inst-head h3{margin:0;font-size:15px;font-family:var(--font-display);font-weight:600;}
+  .inst-head .stats{margin-left:auto;display:flex;gap:8px;font-family:var(--font-mono);font-size:11px;}
+  .inst-head .actions{margin-left:auto;display:flex;gap:6px;}
+  .cert-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:1px;background:var(--line-soft);}
+  .cert-cell{background:var(--white);padding:12px 16px;cursor:pointer;transition:background .12s;}
+  .cert-cell:hover{background:var(--paper-dim);}
+  .cert-cell .cn{font-size:13px;font-weight:600;margin-bottom:5px;}
+  .cert-cell .cd{font-size:11.5px;color:var(--muted);font-family:var(--font-mono);display:flex;justify-content:space-between;gap:8px;}
+  .cert-cell .foot{display:flex;justify-content:space-between;align-items:center;margin-top:6px;gap:6px;flex-wrap:wrap;}
+  .file-link{white-space:nowrap;font-size:11.5px;font-weight:600;color:var(--teal);text-decoration:none;border:1px solid var(--teal-soft);background:var(--teal-soft);padding:2px 8px;border-radius:20px;}
+  .file-link:hover{border-color:var(--teal);}
+  .badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;font-family:var(--font-mono);white-space:nowrap;}
+  .badge.ok{background:var(--ok-soft);color:var(--ok);}
+  .badge.warn{background:var(--warn-soft);color:#8a6420;}
+  .badge.bad{background:var(--bad-soft);color:var(--bad);}
+  .badge.info{background:var(--teal-soft);color:var(--teal);}
+  .badge.none, .badge.done{background:var(--paper-dim);color:var(--muted);}
+  .badge.na{background:transparent;color:var(--muted);border:1px dashed var(--line);}
+  .cert-cell.na{opacity:.6;}
+  .cert-cell.na .cn{text-decoration:line-through;text-decoration-color:var(--line);}
+  .regra-tag{font-size:10.5px;color:var(--muted);margin:-2px 0 5px;}
+
+  /* Instituições */
+  .inst-body{display:grid;grid-template-columns:repeat(3,1fr);}
+  .form-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:start;}
+  .form-col{background:var(--white);border:1px solid var(--line-soft);border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0;}
+  .form-col h3{font-family:var(--font-display);font-size:15px;font-weight:600;margin:0 0 2px;padding-bottom:8px;border-bottom:1px solid var(--line-soft);}
+  .form-col .addr-title{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700;margin:4px 0 -4px;}
+  .field-row.r-3-1{grid-template-columns:3fr 1fr;}
+  .field-row.r-1-2{grid-template-columns:1fr 2fr;}
+  .kv-col{padding:12px 16px;}
+  .kv-col + .kv-col{border-left:1px solid var(--line-soft);}
+  .kv-col h4{margin:0 0 6px;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);}
+  .kv{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dashed var(--line-soft);font-size:13.5px;}
+  .kv:last-child{border-bottom:none;}
+  .kv .k{width:118px;color:var(--muted);font-size:12px;flex:none;}
+  .kv .v{flex:1;word-break:break-word;}
+  .kv .v.empty{color:var(--line);}
+  .inst-projs{padding:10px 16px 14px;border-top:1px solid var(--line-soft);display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+  .proj-pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:20px;padding:3px 4px 3px 10px;font-size:12.5px;background:var(--white);cursor:pointer;}
+  .proj-pill:hover{border-color:var(--ink);}
+
+  .cfg-section{margin-bottom:28px;max-width:900px;}
+  .cfg-section h3{font-family:var(--font-display);font-size:17px;margin:0 0 4px;}
+  .hint{font-size:12.5px;color:var(--muted);margin-bottom:12px;}
+  .cfg-list{display:flex;flex-direction:column;gap:8px;}
+  .cfg-row{display:flex;align-items:center;gap:8px;background:var(--white);border:1px solid var(--line-soft);border-radius:8px;padding:8px 10px;}
+  .cfg-row input{flex:1;border:none;background:transparent;padding:4px;min-width:0;}
+  .cfg-row input:focus{outline:none;background:var(--paper-dim);border-radius:5px;}
+  .icon-btn{border:none;background:none;color:var(--muted);padding:4px 6px;border-radius:6px;font-size:14px;line-height:1;}
+  .icon-btn:hover{background:var(--paper-dim);color:var(--ink);}
+  .icon-btn.del:hover{color:var(--rust);}
+
+  .overlay{position:fixed;inset:0;background:rgba(21,26,35,.5);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;backdrop-filter:blur(2px);}
+  .modal{background:var(--paper);border-radius:14px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 60px rgba(0,0,0,.35);border:1px solid var(--line);}
+  .modal-head{padding:20px 22px 12px;display:flex;justify-content:space-between;align-items:flex-start;}
+  .modal-head h2{font-family:var(--font-display);font-size:19px;margin:0;font-weight:600;}
+  .modal-close{background:none;border:none;font-size:20px;color:var(--muted);padding:2px 8px;}
+  .modal-body{padding:4px 22px 22px;display:flex;flex-direction:column;gap:14px;}
+  .modal-sub{font-family:var(--font-display);font-size:15px;font-weight:600;margin:6px 0 -4px;padding-top:10px;border-top:1px solid var(--line-soft);}
+  .field label{display:block;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:5px;}
+  .field input, .field select, .field textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:var(--white);}
+  .field textarea{min-height:70px;resize:vertical;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .modal-actions{display:flex;justify-content:space-between;gap:10px;margin-top:6px;padding-top:14px;border-top:1px solid var(--line-soft);}
+  .status-picker{display:flex;gap:6px;}
+  .status-picker button{flex:1;padding:8px;border-radius:7px;border:1px solid var(--line);background:var(--white);font-size:12px;font-weight:600;color:var(--muted);}
+  .status-picker button.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .check-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+  .check-grid label{display:flex;align-items:center;gap:7px;font-size:13px;text-transform:none;letter-spacing:0;color:var(--ink);font-weight:500;margin:0;background:var(--white);border:1px solid var(--line-soft);border-radius:7px;padding:6px 8px;}
+  .check-grid input{width:auto !important;}
+  .swatches{display:flex;gap:8px;}
+  .swatches button{width:26px;height:26px;border-radius:6px;border:2px solid transparent;}
+  .swatches button.active{border-color:var(--ink);box-shadow:0 0 0 2px var(--paper) inset;}
+  .hist{display:flex;flex-direction:column;gap:5px;max-height:160px;overflow-y:auto;}
+  .hist div{font-size:12.5px;display:flex;gap:8px;align-items:center;}
+
+  .fab{position:fixed;bottom:24px;right:24px;z-index:40;box-shadow:0 10px 30px rgba(21,26,35,.35);}
+  .toast{position:fixed;bottom:24px;left:24px;background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:8px;font-size:13px;z-index:600;box-shadow:var(--shadow);opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none;}
+  .toast.show{opacity:1;transform:translateY(0);}
+  .empty-state{text-align:center;padding:60px 20px;color:var(--muted);}
+  .empty-state .big{font-family:var(--font-display);font-size:20px;color:var(--ink);margin-bottom:6px;}
+  .note{background:var(--warn-soft);border-radius:8px;padding:9px 12px;font-size:12.5px;color:#6d5320;margin-bottom:14px;}
+
+  @media (max-width:1100px){
+    .inst-body{grid-template-columns:1fr;}
+    .kv-col + .kv-col{border-left:none;border-top:1px solid var(--line-soft);}
+    .form-cols{grid-template-columns:1fr;}
+  }
+  @media (max-width:860px){
+    #app{padding:0 16px 12px;}
+    .board{grid-template-columns:1fr;}
+    header.top{padding:20px 0 14px;}
+    header.top h1{font-size:21px;}
+    .field-row, .field-row.r-3-1, .field-row.r-1-2, .check-grid{grid-template-columns:1fr;}
+    .inst-body{grid-template-columns:1fr;}
+    .kv-col + .kv-col{border-left:none;border-top:1px solid var(--line-soft);}
+    .fab{bottom:16px;right:16px;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <div class="head-left">
+      <div class="brand-mark">GP</div>
+      <div><h1>Gestor de Projetos</h1></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <div class="save-state"><span class="dot" id="saveDot"></span><span id="saveLabel">carregando…</span></div>
+      <div id="userBox" style="display:none;align-items:center;gap:8px;font-size:13px;">
+        <span class="avatar" id="userAvatar"></span>
+        <span id="userName" style="font-weight:600;"></span>
+        <button class="btn ghost small" id="changePassBtn">Trocar senha</button>
+        <button class="btn ghost small" id="logoutBtn">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs"></nav>
+  <div id="banner" class="banner"></div>
+  <div id="tabContent"></div>
+</div>
+
+<button class="btn fab" id="fabAdd" style="display:none;">+ Nova tarefa</button>
+<div class="toast" id="toast"></div>
+
+<!-- ===== Login ===== -->
+<div class="overlay" id="loginOverlay" style="z-index:500;">
+  <div class="modal" style="max-width:360px;">
+    <div class="modal-head"><h2>Entrar</h2></div>
+    <div class="modal-body">
+      <div class="hint" style="margin:-8px 0 0;">Acesso ao Gestor de Projetos.</div>
+      <div class="field"><label>Usuário</label><input id="loginUser" placeholder="seu usuário" autocomplete="username"></div>
+      <div class="field"><label>Senha</label><input id="loginPass" type="password" placeholder="sua senha" autocomplete="current-password"></div>
+      <div id="loginError" style="color:var(--bad);font-size:13px;display:none;"></div>
+      <div class="modal-actions" style="justify-content:flex-end;"><button class="btn" id="loginBtn">Entrar</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ================== CONFIGURAÇÃO ================== */
+// Cole aqui a URL do Web App do Google Apps Script (termina em /exec)
+const API_URL = 'https://script.google.com/macros/s/AKfycbyRPTARNuu6XsreTKxfAS-f87-iXMocJA_PyAKxtzY_STeFyKOpuITqBhQ75it0huIh/exec';
+
+/* ================== CONSTANTES ================== */
+const uid = () => Math.random().toString(36).slice(2,10);
+const PALETTE = ['#2f6f6a','#a8452f','#8a6d3b','#4a5a8a','#6a4a7a','#3c7a4c','#7a5a3a','#5a6a7a'];
+const USER_PALETTE = ['#C9D6EE','#E3D2EE','#C8E6E1','#C7E1E8','#D8D2F0','#EED2E4','#D2E5DC','#D6DCEE'];
+
+// Ciclo do projeto. "acomp" = status que exige acompanhamento de prazos (entra no indicador do topo).
+const PROJ_STATUS = [
+  {id:'proposta',           label:'Proposta',                                   curto:'Proposta',            cls:'none'},
+  {id:'tramitacao',         label:'Em tramitação',                              curto:'Em tramitação',       cls:'warn', acomp:true},
+  {id:'aprovacao',          label:'Aprovação do edital',                        curto:'Aprovação do edital', cls:'info'},
+  {id:'contrato',           label:'Assinatura de contrato / abertura de conta', curto:'Contrato / conta',    cls:'info'},
+  {id:'execucao',           label:'Em execução',                                curto:'Em execução',         cls:'ok'},
+  {id:'alteracao',          label:'Em alteração de plano',                      curto:'Em alteração',        cls:'warn', acomp:true},
+  {id:'alteracao_aprovada', label:'Alteração aprovada',                         curto:'Alteração aprovada',  cls:'ok'},
+  {id:'prestacao',          label:'Prestação de contas final',                  curto:'Prestação final',     cls:'info'},
+  {id:'finalizado',         label:'Finalizado',                                 curto:'Finalizado',          cls:'done'}
+];
+const ALT_TIPOS = ['Alteração de prazo','Uso de rendimentos','Alteração de rubrica / destinação de recursos','Outra alteração'];
+const LINK_CATS = ['Pasta / Drive','SharePoint','Sistema','Acesso / Senha','Planilha','Certidão','Outro'];
+const STATUS_COLS = [
+  {id:'afazer', label:'A Fazer'},
+  {id:'andamento', label:'Em Andamento'},
+  {id:'concluido', label:'Concluído'}
+];
+
+function defaultState(){
+  return {
+    membros: [],
+    instituicoes: [],
+    certidaoTipos: [
+      'Certidão Dívida Ativa da União','Certidão Dívida Ativa Estadual','Certidão Débitos Municipais',
+      'Certidão FGTS','Certidão Trabalhista (CNDT)','Certidão CEPIM','Certidão do TCE',
+      'COMTIBA','CMAS','CMDCA','Ata de Eleição'
+    ].map(nome=>({id:uid(), nome, notificarApenasNoDia:false, siteEmissao: siteConhecido(nome), categoria: categoriaPadrao(nome), regraNotif: categoriaPadrao(nome)==='certidao'?'dia':'4meses'})),
+    tiposTarefa: ['Contrato','Cotação','Pagamento','Documentação','Certidão','Prestação de Contas','Alteração de projeto','Outro'],
+    origensProjeto: ['Prefeitura','Governo Estadual','Governo Federal','ONU / Organismo internacional','Fundação / Iniciativa privada','Outro'],
+    certidoes: [],
+    links: [],
+    tarefas: [],
+    notifCertidaoMembroId: null,
+    notifInstitucionalMembroId: null
+  };
+}
+
+/* ================== ESTADO ================== */
+let session = null;
+let state = null;
+let activeTab = 'tarefas';
+let filters = { inst:'', proj:'', resp:'', status:'', tipo:'', busca:'' };        // tarefas
+let projFilters = { inst:'', status:'', origem:'', busca:'', finalizados:false };  // projetos
+let linkFilters = { inst:'', cat:'', busca:'' };                                    // links
+let certInst = '';                                                                  // certidões
+let taskViewMode = 'lista';
+let showArchived = false;
+let selectedTaskIds = new Set();
+let saveTimer = null;
+
+/* ================== API (Google Sheets via Apps Script) ================== */
+async function apiCall(action, params, method, _isRetry){
+  if(!API_URL || API_URL.indexOf('COLE_AQUI') === 0){
+    throw new Error('A URL do Apps Script ainda não foi configurada no topo do arquivo (API_URL).');
+  }
+  try{
+    let res;
+    if(method === 'POST'){
+      res = await fetch(API_URL, {method:'POST', body: new URLSearchParams({action, ...params})});
+    } else {
+      res = await fetch(`${API_URL}?${new URLSearchParams({action, ...params}).toString()}`);
+    }
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    return await res.json();
+  }catch(e){
+    if(!_isRetry){ await new Promise(r=>setTimeout(r, 900)); return apiCall(action, params, method, true); }
+    throw e;
+  }
+}
+const apiLogin = (usuario, senha)=> apiCall('login', {usuario, senha}, 'POST');
+const apiGetData = ()=> apiCall('getData', {token: session.token}, 'POST'); // tudo por POST: nesta publicação, respostas de GET voltam 404
+const apiSaveData = (obj)=> apiCall('saveData', {token: session.token, payload: JSON.stringify(obj)}, 'POST');
+const apiChangePassword = (senhaAtual, novaSenha)=> apiCall('changePassword', {token: session.token, senhaAtual, novaSenha}, 'POST');
+
+// Notificação de WhatsApp via CallMeBot (feita pelo Apps Script). Falhas são silenciosas.
+async function apiNotify(tipo, membro, param1, param2){
+  if(!session || !membro || !membro.whatsapp || !membro.callmebotApiKey) return;
+  try{
+    const res = await apiCall('notify', {token: session.token, tipo, telefone: membro.whatsapp, apikey: membro.callmebotApiKey, param1: param1||'', param2: param2||''}, 'POST');
+    if(!res.ok) console.warn('Notificação não enviada:', res.error);
+  }catch(e){ console.warn('Erro ao notificar WhatsApp:', e); }
+}
+
+/* ================== LOGIN ================== */
+function showLogin(msg){
+  document.getElementById('loginOverlay').style.display = 'flex';
+  document.getElementById('userBox').style.display = 'none';
+  const err = document.getElementById('loginError');
+  if(msg){ err.textContent = msg; err.style.display='block'; } else err.style.display='none';
+  setSaveState('idle');
+}
+function hideLogin(){ document.getElementById('loginOverlay').style.display = 'none'; }
+
+async function doLogin(){
+  const usuario = document.getElementById('loginUser').value.trim();
+  const senha = document.getElementById('loginPass').value;
+  const btn = document.getElementById('loginBtn');
+  const err = document.getElementById('loginError');
+  err.style.display='none';
+  if(!usuario || !senha){ err.textContent='Preencha usuário e senha.'; err.style.display='block'; return; }
+  btn.textContent = 'Entrando…'; btn.disabled = true;
+  try{
+    const res = await apiLogin(usuario, senha);
+    if(!res.ok){ err.textContent = res.error || 'Usuário ou senha inválidos.'; err.style.display='block'; return; }
+    session = { token: res.token, usuario, nome: res.nome || usuario };
+    sessionStorage.setItem('gp_session', JSON.stringify(session));
+    document.getElementById('loginPass').value = '';
+    hideLogin();
+    await initApp();
+  }catch(e){
+    console.error(e);
+    err.textContent = e.message && e.message.includes('API_URL') ? e.message : 'Não foi possível conectar. Verifique a URL do Apps Script e sua conexão.';
+    err.style.display='block';
+  }finally{ btn.textContent = 'Entrar'; btn.disabled = false; }
+}
+
+function doLogout(msg){
+  session = null;
+  sessionStorage.removeItem('gp_session');
+  showLogin(msg);
+}
+
+function updateUserBox(){
+  const box = document.getElementById('userBox');
+  if(!session){ box.style.display='none'; return; }
+  box.style.display='flex';
+  const av = document.getElementById('userAvatar');
+  av.textContent = initials(session.nome);
+  const me = currentMembro();
+  if(me){ av.style.background = membroColor(me); av.style.color = '#2b2f38'; }
+  document.getElementById('userName').textContent = session.nome;
+}
+
+function openChangePasswordModal(){
+  const overlay = makeModal('Trocar senha', `
+    <div class="field"><label>Senha atual</label><input id="cp_atual" type="password" autocomplete="current-password"></div>
+    <div class="field"><label>Nova senha</label><input id="cp_nova" type="password" autocomplete="new-password"></div>
+    <div class="field"><label>Confirmar nova senha</label><input id="cp_conf" type="password" autocomplete="new-password"></div>
+    <div id="cp_error" style="color:var(--bad);font-size:13px;display:none;"></div>
+    <div class="modal-actions" style="justify-content:flex-end;">
+      <button class="btn ghost" data-close>Cancelar</button>
+      <button class="btn" id="cp_save">Salvar nova senha</button>
+    </div>`, 380);
+  overlay.querySelector('#cp_save').onclick = async ()=>{
+    const atual = overlay.querySelector('#cp_atual').value;
+    const nova = overlay.querySelector('#cp_nova').value;
+    const conf = overlay.querySelector('#cp_conf').value;
+    const err = overlay.querySelector('#cp_error');
+    const fail = m=>{ err.textContent=m; err.style.display='block'; };
+    err.style.display='none';
+    if(!atual || !nova || !conf) return fail('Preencha todos os campos.');
+    if(nova !== conf) return fail('A nova senha e a confirmação não coincidem.');
+    if(nova.length < 6) return fail('A nova senha deve ter pelo menos 6 caracteres.');
+    const btn = overlay.querySelector('#cp_save');
+    btn.disabled = true; btn.textContent = 'Salvando…';
+    try{
+      const res = await apiChangePassword(atual, nova);
+      if(!res.ok){ fail(res.error || 'Não foi possível trocar a senha.'); btn.disabled=false; btn.textContent='Salvar nova senha'; return; }
+      overlay.remove(); toast('Senha alterada com sucesso.');
+    }catch(e){ fail('Erro de conexão. Tente novamente.'); btn.disabled=false; btn.textContent='Salvar nova senha'; }
+  };
+}
+
+/* ================== CARREGAR / SALVAR ================== */
+const END_KEYS = ['cep','logradouro','numero','complemento','bairro','cidade','uf'];
+function normalizeEnd(e, legado){
+  if(!e || typeof e !== 'object') e = {};
+  END_KEYS.forEach(k=>{ if(typeof e[k] !== 'string') e[k] = ''; });
+  // endereço antigo (texto único) vai para o logradouro, para não perder nada
+  if(legado && END_KEYS.every(k=>!e[k])) e.logradouro = legado;
+  return e;
+}
+function normalizePessoa(o, keys, legadoEnd){
+  if(!o || typeof o !== 'object') o = {};
+  keys.forEach(k=>{ if(typeof o[k] !== 'string') o[k] = ''; });
+  o.end = normalizeEnd(o.end, legadoEnd);
+  return o;
+}
+const REP_KEYS = ['nome','cpf','rg','profissao','email','telefone'];
+const CONT_KEYS = ['nome','cpf','rg','profissao','crcUf','crcNumero','email','telefone'];
+function normalizeInst(i, idx, extrasStatus){
+  i.nome = i.nome || 'Instituição';
+  if(!i.cor) i.cor = PALETTE[idx % PALETTE.length];
+  ['sigla','cnpj','email','endereco','telefone','dataInscricao'].forEach(k=>{ if(typeof i[k] !== 'string') i[k] = ''; });
+  i.end = normalizeEnd(i.end, i.endereco);
+  i.endereco = formatEnd(i.end);
+  i.rep = normalizePessoa(i.rep, REP_KEYS);
+  i.contador = normalizePessoa(i.contador, CONT_KEYS);
+  if(typeof i.excluirIndicadores === 'undefined') i.excluirIndicadores = false;
+  if(!Array.isArray(i.projetos)) i.projetos = [];
+  i.projetos.forEach(p=>normalizeProj(p, extrasStatus));
+}
+function normalizeProj(p, extras){
+  p.nome = p.nome || 'Projeto';
+  ['codigo','origem','inicio','fim','obs'].forEach(k=>{ if(typeof p[k] !== 'string') p[k] = ''; });
+  if(!allProjStatus(extras).some(s=>s.id===p.status)) p.status = 'proposta';
+  if(typeof p.statusDesde !== 'string') p.statusDesde = '';
+  if(!Array.isArray(p.historico)) p.historico = [];
+  if(!Array.isArray(p.alteracaoTipos)) p.alteracaoTipos = [];
+  if(!Array.isArray(p.registros)) p.registros = []; // Histórico do Projeto (linha do tempo)
+}
+
+function normalizeState(saved){
+  const s = Object.assign(defaultState(), saved || {});
+  ['membros','instituicoes','certidaoTipos','certidoes','links','tarefas'].forEach(k=>{ if(!Array.isArray(s[k])) s[k] = []; });
+  if(!Array.isArray(s.tiposTarefa) || !s.tiposTarefa.length) s.tiposTarefa = defaultState().tiposTarefa;
+  if(!Array.isArray(s.origensProjeto) || !s.origensProjeto.length) s.origensProjeto = defaultState().origensProjeto;
+  s.membros.forEach((m,idx)=>{
+    m.whatsapp = m.whatsapp || ''; m.callmebotApiKey = m.callmebotApiKey || '';
+    if(!m.cor || !USER_PALETTE.includes(m.cor)) m.cor = USER_PALETTE[idx % USER_PALETTE.length];
+  });
+  // Status de projeto cadastrados pela equipe (botão + na janela do projeto)
+  if(!Array.isArray(s.statusProjetoExtras)) s.statusProjetoExtras = [];
+  s.statusProjetoExtras = s.statusProjetoExtras.filter(e=>e && e.id && e.label).map(e=>({
+    id:String(e.id), label:String(e.label), curto:String(e.curto||e.label), cls: e.acomp ? 'warn' : 'info', acomp: !!e.acomp
+  }));
+  s.instituicoes.forEach((i,idx)=>normalizeInst(i, idx, s.statusProjetoExtras));
+  s.certidoes.forEach(c=>{ if(typeof c.link !== 'string') c.link = ''; });
+  s.certidaoTipos.forEach(ct=>{
+    if(typeof ct.notificarApenasNoDia !== 'boolean') ct.notificarApenasNoDia = false;
+    // Primeira vez: sugere o site oficial conhecido. Depois disso, vale o que a equipe cadastrar (inclusive vazio).
+    if(typeof ct.siteEmissao !== 'string') ct.siteEmissao = siteConhecido(ct.nome);
+    // Categoria e regra de aviso: definidas uma vez pelo nome ("Certidão..." = convencional); depois vale o que a equipe escolher.
+    if(ct.categoria!=='certidao' && ct.categoria!=='institucional') ct.categoria = categoriaPadrao(ct.nome);
+    if(!REGRAS_NOTIF.some(r=>r[0]===ct.regraNotif)) ct.regraNotif = ct.categoria==='certidao' ? 'dia' : '4meses';
+  });
+  s.certidoes.forEach(c=>{ c.naoAplica = !!c.naoAplica; });
+  s.certidoes.forEach(c=>{ if(typeof c.siteEmissao !== 'string') c.siteEmissao = ''; });
+  s.links.forEach(l=>{
+    ['titulo','url','categoria','usuario','senha','obs','instituicaoId','projetoId'].forEach(k=>{ if(typeof l[k] !== 'string') l[k] = ''; });
+  });
+  s.tarefas.forEach(t=>{
+    if(!Array.isArray(t.chat)) t.chat = [];
+    if(!Array.isArray(t.checklist)) t.checklist = [];
+    ['criadoEm','pendenteLeituraPara','pendenteDesde','concluidoEm','naoLidoPara','ultimaLeituraPor','ultimaLeituraEm','recorrencia'].forEach(k=>{ if(typeof t[k] === 'undefined') t[k] = null; });
+    if(typeof t.projetoId !== 'string') t.projetoId = '';
+  });
+  if(typeof s.notifCertidaoMembroId === 'undefined') s.notifCertidaoMembroId = null;
+  // Responsável pelos documentos institucionais: começa igual ao das certidões (ninguém fica sem aviso na troca de versão).
+  if(!saved || !('notifInstitucionalMembroId' in saved)) s.notifInstitucionalMembroId = s.notifCertidaoMembroId;
+  return s;
+}
+
+async function loadState(){
+  let precisaSalvar = false;
+  try{
+    const res = await apiGetData();
+    if(!res.ok){
+      if(/sess/i.test(res.error||'')){ doLogout('Sua sessão expirou. Entre novamente.'); return; }
+      throw new Error(res.error || 'Falha ao carregar dados.');
+    }
+    state = normalizeState(res.data);
+    if(!res.data) precisaSalvar = true;
+    // Quem entra pela primeira vez vira automaticamente membro da equipe (nome igual ao da aba "Usuarios").
+    if(session && !state.membros.some(m=>normalizeStr(m.nome)===normalizeStr(session.nome))){
+      state.membros.push({id:uid(), nome:session.nome, whatsapp:'', callmebotApiKey:'', cor: USER_PALETTE[state.membros.length % USER_PALETTE.length]});
+      precisaSalvar = true;
+    }
+    if(precisaSalvar) await persist(true);
+    setSaveState('ok');
+  }catch(e){
+    console.error('load error', e);
+    setSaveState('error');
+    toast('Erro ao carregar dados da planilha.');
+    state = normalizeState(null);
+  }
+  render();
+}
+
+async function persist(silent){
+  if(!silent) setSaveState('saving');
+  try{
+    const res = await apiSaveData(state);
+    if(!res.ok){
+      if(/sess/i.test(res.error||'')){ doLogout('Sua sessão expirou. Entre novamente — a última alteração pode não ter sido salva.'); return; }
+      throw new Error(res.error);
+    }
+    setSaveState('ok');
+  }catch(e){ console.error('save error', e); setSaveState('error'); }
+}
+function scheduleSave(){
+  setSaveState('saving');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(()=>persist(false), 500);
+}
+function setSaveState(s){
+  const dot = document.getElementById('saveDot'), lbl = document.getElementById('saveLabel');
+  if(!dot) return;
+  dot.className = 'dot' + (s==='saving' ? ' saving' : '');
+  dot.style.background = s==='error' ? 'var(--bad)' : s==='idle' ? 'var(--muted)' : s==='saving' ? '' : 'var(--ok)';
+  lbl.textContent = {saving:'salvando…', error:'erro ao salvar', idle:'desconectado'}[s] || 'sincronizado — planilha';
+}
+
+/* ================== HELPERS ================== */
+function instById(id){ return state.instituicoes.find(i=>i.id===id); }
+// Como a instituição aparece no sistema: a sigla, se houver; senão o nome completo.
+function instLabel(i){ return i ? ((i.sigla||'').trim() || i.nome) : ''; }
+function projById(instId, projId){ const i=instById(instId); return i && i.projetos.find(p=>p.id===projId); }
+function membroById(id){ return state.membros.find(m=>m.id===id); }
+// Todos os status disponíveis: os padrão + os cadastrados pela equipe (entram antes de "Finalizado").
+function allProjStatus(extras){
+  const ex = (extras || (state && state.statusProjetoExtras) || []).map(e=>({...e, extra:true}));
+  const fim = PROJ_STATUS.filter(s=>s.id==='finalizado');
+  return PROJ_STATUS.filter(s=>s.id!=='finalizado').concat(ex, fim);
+}
+function statusById(id){
+  const all = allProjStatus();
+  return all.find(s=>s.id===id) || {id, label:String(id||'—'), curto:String(id||'—'), cls:'none'};
+}
+function projLabel(p){ return p ? (p.nome + (p.codigo ? ` (${p.codigo})` : '')) : ''; }
+function projBadge(p){ const s = statusById(p.status); return `<span class="badge ${s.cls}">${escapeHtml(s.curto)}</span>`; }
+function currentMembro(){
+  if(!session || !state) return null;
+  return state.membros.find(m=>normalizeStr(m.nome)===normalizeStr(session.nome)) || null;
+}
+// Usuário logado como membro da equipe; se ainda não existir (ex.: nome alterado), é criado agora.
+function ensureCurrentMembro(){
+  let m = currentMembro();
+  if(!m && session){
+    m = {id:uid(), nome:session.nome, whatsapp:'', callmebotApiKey:'', cor: USER_PALETTE[state.membros.length % USER_PALETTE.length]};
+    state.membros.push(m); scheduleSave();
+  }
+  return m;
+}
+function membroColor(m){ return (m && m.cor) ? m.cor : '#eae5d8'; }
+function avatarBadge(m){
+  if(!m) return '';
+  return `<span class="avatar" title="${escapeAttr(m.nome)}" style="background:${membroColor(m)};color:#2b2f38;">${initials(m.nome)}</span>`;
+}
+function setPendente(t, membroId){
+  t.pendenteLeituraPara = membroId || null;
+  t.pendenteDesde = membroId ? new Date().toISOString() : null;
+  t.naoLidoPara = membroId || null;
+}
+function initials(name){ return (name||'').split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase(); }
+function fmtDate(d){ if(!d) return '—'; const dt = new Date(String(d).slice(0,10)+'T00:00:00'); return isNaN(dt) ? '—' : dt.toLocaleDateString('pt-BR'); }
+function fmtDateTime(iso){
+  if(!iso) return '—';
+  const dt = new Date(iso);
+  if(isNaN(dt)) return '—';
+  return dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+}
+function todayStr(){ const d = new Date(); return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`; }
+function daysUntil(d){ if(!d) return null; const today = new Date(); today.setHours(0,0,0,0); const dt = new Date(String(d).slice(0,10)+'T00:00:00'); if(isNaN(dt)) return null; return Math.round((dt-today)/86400000); }
+function pad2(n){ return String(n).padStart(2,'0'); }
+function normalizeStr(s){ return String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim().replace(/\s+/g,' '); }
+function escapeHtml(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+const escapeAttr = escapeHtml;
+function isUrl(u){ return /^https?:\/\//i.test(u); }
+// Transforma URLs (http://, https://, www.) em links clicáveis. Todo o resto é escapado —
+// nenhum HTML digitado no comentário é executado, e só são gerados links http/https.
+function linkifyText(text){
+  const src = String(text==null?'':text);
+  const re = /\b(?:https?:\/\/|www\.)[^\s<>"']+/gi;
+  let out = '', last = 0, m;
+  while((m = re.exec(src))){
+    let url = m[0];
+    const trail = url.match(/[.,;:!?)\]}]+$/); // pontuação no fim da frase não faz parte do link
+    if(trail) url = url.slice(0, url.length - trail[0].length);
+    if(!url || /^www\.$/i.test(url)) continue;
+    const href = /^www\./i.test(url) ? 'https://' + url : url;
+    let ok = false;
+    try{ const u = new URL(href); ok = (u.protocol==='http:' || u.protocol==='https:') && !!u.hostname; }catch(e){}
+    out += escapeHtml(src.slice(last, m.index));
+    out += ok
+      ? `<a href="${escapeAttr(href)}" target="_blank" rel="noopener noreferrer nofollow" style="color:var(--teal);text-decoration:underline;word-break:break-all;">${escapeHtml(url)}</a>`
+      : escapeHtml(url);
+    last = m.index + url.length;
+    re.lastIndex = last;
+  }
+  return out + escapeHtml(src.slice(last));
+}
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>t.classList.remove('show'), 2400);
+}
+async function copyText(text, okMsg){
+  text = String(text||'').trim();
+  if(!text){ toast('Nada para copiar.'); return; }
+  try{ await navigator.clipboard.writeText(text); toast(okMsg || 'Copiado!'); }
+  catch(e){
+    const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+    try{ document.execCommand('copy'); toast(okMsg || 'Copiado!'); }catch(_){ toast('Não foi possível copiar — selecione o texto manualmente.'); }
+    ta.remove();
+  }
+}
+// Cria um modal padrão. Elementos com [data-close] fecham o modal.
+function makeModal(title, bodyHtml, maxWidth){
+  const overlay = document.createElement('div');
+  overlay.className = 'overlay';
+  overlay.innerHTML = `
+    <div class="modal" style="${maxWidth?`max-width:${maxWidth}px;`:''}">
+      <div class="modal-head"><h2>${title}</h2><button class="modal-close" data-close>✕</button></div>
+      <div class="modal-body">${bodyHtml}</div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.querySelectorAll('[data-close]').forEach(b=>b.onclick = ()=>overlay.remove());
+  overlay.addEventListener('mousedown', e=>{ if(e.target===overlay) overlay.remove(); });
+  return overlay;
+}
+function makeScrollArea(c){
+  const a = document.createElement('div');
+  a.style.cssText = 'flex:1;min-height:0;overflow-y:auto;padding-bottom:70px;';
+  c.appendChild(a);
+  return a;
+}
+function projOptionsHtml(inst, selectedId, emptyLabel){
+  let html = `<option value="">${emptyLabel}</option>`;
+  if(inst) html += inst.projetos.map(p=>`<option value="${p.id}" ${selectedId===p.id?'selected':''}>${escapeHtml(projLabel(p))}</option>`).join('');
+  return html;
+}
+
+/* ================== SHELL ================== */
+function render(){
+  renderTabs();
+  renderBanner();
+  const c = document.getElementById('tabContent');
+  const fab = document.getElementById('fabAdd');
+  c.innerHTML = '';
+  const fabLabels = {tarefas:'+ Nova tarefa', projetos:'+ Novo projeto', instituicoes:'+ Nova instituição', links:'+ Novo link'};
+  if(fabLabels[activeTab]){ fab.style.display='inline-flex'; fab.textContent = fabLabels[activeTab]; }
+  else fab.style.display='none';
+  if(activeTab==='tarefas') renderTarefas(c);
+  else if(activeTab==='projetos') renderProjetos(makeScrollArea(c));
+  else if(activeTab==='instituicoes') renderInstituicoes(makeScrollArea(c));
+  else if(activeTab==='certidoes') renderCertidoes(makeScrollArea(c));
+  else if(activeTab==='links') renderLinks(makeScrollArea(c));
+  else renderConfig(makeScrollArea(c));
+}
+
+function allProjects(){
+  const out = [];
+  state.instituicoes.forEach(inst=>inst.projetos.forEach(p=>out.push({inst, p})));
+  return out;
+}
+
+function renderTabs(){
+  const nav = document.getElementById('tabs');
+  const pendentes = state.tarefas.filter(t=>t.status!=='concluido').length;
+  const projAtivos = allProjects().filter(x=>x.p.status!=='finalizado').length;
+  const tabs = [
+    ['tarefas','Tarefas',pendentes],
+    ['projetos','Projetos',projAtivos],
+    ['instituicoes','Instituições',state.instituicoes.length],
+    ['certidoes','Certidões',countCertAlerts()],
+    ['links','Central de Links',state.links.length],
+    ['config','Configurações',null]
+  ];
+  nav.innerHTML = tabs.map(([id,label,n])=>`<button data-tab="${id}" class="${activeTab===id?'active':''}">${label}${n!==null?` <span class="count">${n}</span>`:''}</button>`).join('');
+  nav.querySelectorAll('button').forEach(b=>b.onclick=()=>{ activeTab=b.dataset.tab; selectedTaskIds.clear(); render(); });
+}
+
+function computeCertList(kind){
+  const out = [];
+  for(const inst of state.instituicoes){
+    if(inst.excluirIndicadores) continue;
+    for(const tipo of state.certidaoTipos){
+      const c = state.certidoes.find(x=>x.instituicaoId===inst.id && x.tipoId===tipo.id);
+      const st = certStatus(tipo, c); // "não se aplica" e "sem data" nunca entram aqui
+      if(kind==='vencidas' && st.k==='vencida') out.push({inst, tipo, cert:c, dias:st.dias});
+      else if(kind==='vencendo' && st.k==='alerta') out.push({inst, tipo, cert:c, dias:st.dias});
+    }
+  }
+  return out.sort((a,b)=>a.dias-b.dias);
+}
+function countCertAlerts(){ return computeCertList('vencidas').length + computeCertList('vencendo').length; }
+
+function openCertListModal(kind){
+  const items = computeCertList(kind);
+  const title = kind==='vencidas' ? 'Certidões e documentos vencidos' : 'Próximos do vencimento (dentro do prazo de aviso)';
+  const overlay = makeModal(title, items.length===0 ? `<div class="hint" style="margin:0;">Nenhum registro nessa condição.</div>` : `
+    <div class="tbl-wrap" style="max-height:60vh;overflow-y:auto;">
+      <table class="tbl"><thead><tr><th>Instituição</th><th>Documento</th><th>Regra</th><th>Vencimento</th><th>${kind==='vencidas'?'Dias em atraso':'Dias restantes'}</th></tr></thead>
+      <tbody>${items.map(it=>`
+        <tr class="click" data-inst="${it.inst.id}" data-tipo="${it.tipo.id}">
+          <td>${escapeHtml(instLabel(it.inst))}</td><td>${escapeHtml(it.tipo.nome)}</td><td class="small muted">${it.tipo.regraNotif==='4meses'?'4 meses':it.tipo.regraNotif==='nenhuma'?'sem aviso':it.tipo.regraNotif==='diaSeguinte'?'1 dia após':'no dia'}</td>
+          <td class="mono">${fmtDate(it.cert.proximoVencimento)}</td>
+          <td class="mono" style="color:${kind==='vencidas'?'var(--bad)':'var(--warn)'};">${Math.abs(it.dias)}</td>
+        </tr>`).join('')}</tbody></table>
+    </div>`, 680);
+  overlay.querySelectorAll('tbody tr').forEach(tr=>tr.onclick = ()=>{
+    overlay.remove(); activeTab='certidoes'; render(); openCertModal(tr.dataset.inst, tr.dataset.tipo);
+  });
+}
+
+function renderBanner(){
+  const b = document.getElementById('banner');
+  const pendentes = state.tarefas.filter(t=>t.status!=='concluido').length;
+  const atrasadas = state.tarefas.filter(t=>t.status!=='concluido' && t.prazo && daysUntil(t.prazo)<0).length;
+  const acomp = allProjects().filter(x=>statusById(x.p.status).acomp).length;
+  const vencidas = computeCertList('vencidas').length, vencendo = computeCertList('vencendo').length;
+  b.innerHTML = `
+    <div class="cell"><div class="num">${pendentes}</div><div class="lbl">Tarefas pendentes</div></div>
+    <div class="cell ${atrasadas?'bad':''}"><div class="num">${atrasadas}</div><div class="lbl">Tarefas atrasadas</div></div>
+    <div class="cell click ${acomp?'warn':''}" id="cellAcomp" title="Projetos em tramitação ou em alteração de plano"><div class="num">${acomp}</div><div class="lbl">Projetos em acompanhamento</div></div>
+    <div class="cell click ${vencidas?'bad':''}" id="cellVencidas"><div class="num">${vencidas}</div><div class="lbl">Certidões vencidas</div></div>
+    <div class="cell click ${vencendo?'warn':''}" id="cellVencendo"><div class="num">${vencendo}</div><div class="lbl">Próximos do vencimento</div></div>
+  `;
+  b.querySelector('#cellAcomp').onclick = ()=>{ projFilters = {inst:'', status:'acomp', origem:'', busca:'', finalizados:false}; activeTab='projetos'; render(); };
+  b.querySelector('#cellVencidas').onclick = ()=>openCertListModal('vencidas');
+  b.querySelector('#cellVencendo').onclick = ()=>openCertListModal('vencendo');
+}
+
+/* ================== TAREFAS ================== */
+function renderTarefas(c){
+  const arquivadasCount = state.tarefas.filter(t=>t.status==='concluido').length;
+  const filterBar = document.createElement('div');
+  filterBar.className = 'filters';
+  filterBar.innerHTML = `
+    <input type="text" id="searchFilter" placeholder="🔎 Buscar por título..." value="${escapeAttr(filters.busca)}">
+    <select id="instFilter"><option value="">Todas instituições</option>
+      ${state.instituicoes.map(i=>`<option value="${i.id}" ${filters.inst===i.id?'selected':''}>${escapeHtml(instLabel(i))}</option>`).join('')}
+    </select>
+    <select id="projFilter"></select>
+    <select id="respFilter"><option value="">Todos responsáveis</option>
+      ${state.membros.map(m=>`<option value="${m.id}" ${filters.resp===m.id?'selected':''}>${escapeHtml(m.nome)}</option>`).join('')}
+    </select>
+    <select id="tipoFilter"><option value="">Todos tipos</option>
+      ${state.tiposTarefa.map(t=>`<option value="${escapeAttr(t)}" ${filters.tipo===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}
+    </select>
+    ${!showArchived ? `<select id="statusFilter"><option value="">Todos status</option>
+      ${STATUS_COLS.filter(sc=>sc.id!=='concluido').map(sc=>`<option value="${sc.id}" ${filters.status===sc.id?'selected':''}>${sc.label}</option>`).join('')}
+    </select>` : ''}
+    <div class="spacer"></div>
+    ${(filters.inst||filters.proj||filters.resp||filters.tipo||filters.status||filters.busca) ? `<button class="chip-clear" id="clearFilters">limpar filtros</button>` : ''}
+    <button id="toggleArchive" class="btn ghost small" style="${showArchived?'background:var(--ink);color:var(--paper);':''}">🗄 ${showArchived?'Ver ativas':'Arquivadas'} (${arquivadasCount})</button>
+    <div style="display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;">
+      <button id="viewLista" style="border:none;padding:8px 12px;font-size:12.5px;font-weight:600;background:${taskViewMode==='lista'?'var(--ink)':'var(--white)'};color:${taskViewMode==='lista'?'var(--paper)':'var(--ink)'};">☰ Lista</button>
+      <button id="viewQuadro" style="border:none;padding:8px 12px;font-size:12.5px;font-weight:600;background:${taskViewMode==='quadro'?'var(--ink)':'var(--white)'};color:${taskViewMode==='quadro'?'var(--paper)':'var(--ink)'};">▦ Quadro</button>
+    </div>
+  `;
+  c.appendChild(filterBar);
+
+  const projFilterEl = filterBar.querySelector('#projFilter');
+  const instSel = instById(filters.inst);
+  if(instSel){
+    projFilterEl.innerHTML = projOptionsHtml(instSel, filters.proj, 'Todos projetos');
+  } else {
+    const all = allProjects().sort((a,b)=>instLabel(a.inst).localeCompare(instLabel(b.inst)) || a.p.nome.localeCompare(b.p.nome));
+    projFilterEl.innerHTML = `<option value="">Todos projetos</option>` + all.map(x=>`<option value="${x.p.id}" ${filters.proj===x.p.id?'selected':''}>${escapeHtml(instLabel(x.inst))} — ${escapeHtml(projLabel(x.p))}</option>`).join('');
+  }
+
+  const searchEl = filterBar.querySelector('#searchFilter');
+  searchEl.oninput = e=>{
+    filters.busca = e.target.value;
+    const pos = e.target.selectionStart;
+    render();
+    requestAnimationFrame(()=>{ const n = document.getElementById('searchFilter'); if(n){ n.focus(); n.setSelectionRange(pos,pos); } });
+  };
+  filterBar.querySelector('#instFilter').onchange = e=>{ filters.inst=e.target.value; filters.proj=''; render(); };
+  projFilterEl.onchange = e=>{ filters.proj=e.target.value; render(); };
+  filterBar.querySelector('#respFilter').onchange = e=>{ filters.resp=e.target.value; render(); };
+  filterBar.querySelector('#tipoFilter').onchange = e=>{ filters.tipo=e.target.value; render(); };
+  const stEl = filterBar.querySelector('#statusFilter');
+  if(stEl) stEl.onchange = e=>{ filters.status=e.target.value; render(); };
+  const clearBtn = filterBar.querySelector('#clearFilters');
+  if(clearBtn) clearBtn.onclick = ()=>{ filters={inst:'',proj:'',resp:'',status:'',tipo:'',busca:''}; render(); };
+  filterBar.querySelector('#toggleArchive').onclick = ()=>{ showArchived = !showArchived; filters.status=''; render(); };
+  filterBar.querySelector('#viewLista').onclick = ()=>{ taskViewMode='lista'; render(); };
+  filterBar.querySelector('#viewQuadro').onclick = ()=>{ taskViewMode='quadro'; render(); };
+
+  const list = state.tarefas.filter(t=>{
+    if(showArchived ? t.status!=='concluido' : t.status==='concluido') return false;
+    if(filters.inst && t.instituicaoId!==filters.inst) return false;
+    if(filters.proj && t.projetoId!==filters.proj) return false;
+    if(filters.resp && t.responsavelId!==filters.resp) return false;
+    if(filters.tipo && t.tipo!==filters.tipo) return false;
+    if(filters.status && t.status!==filters.status) return false;
+    if(filters.busca && !normalizeStr(t.titulo).includes(normalizeStr(filters.busca))) return false;
+    return true;
+  });
+
+  if(state.tarefas.length===0){
+    const empty = document.createElement('div');
+    empty.className='empty-state';
+    empty.innerHTML = state.instituicoes.length===0
+      ? `<div class="big">Comece cadastrando as instituições</div><div>Vá na aba "Instituições" e use "+ Nova instituição". Depois cadastre os projetos e as tarefas.</div>`
+      : `<div class="big">Nenhuma tarefa ainda</div><div>Use "+ Nova tarefa" para lançar a primeira solicitação.</div>`;
+    c.appendChild(empty);
+    return;
+  }
+
+  const scrollArea = document.createElement('div');
+  scrollArea.style.cssText = 'flex:1;min-height:0;overflow-y:auto;padding-bottom:60px;';
+  c.appendChild(scrollArea);
+  if(taskViewMode==='lista') renderTarefasLista(scrollArea, list); else renderTarefasBoard(scrollArea, list);
+
+  const footer = document.createElement('div');
+  footer.style.cssText = 'flex:none;text-align:center;padding:10px 0 2px;font-size:12px;color:var(--muted);font-family:var(--font-mono);';
+  footer.textContent = `Total de tarefas cadastradas: ${state.tarefas.length}`;
+  c.appendChild(footer);
+}
+
+function statusColorInfo(t){
+  if(t.status==='concluido') return {label:'Concluído', cls:'done'};
+  if(t.prazo && daysUntil(t.prazo) < 0) return {label:'Atrasada', cls:'bad'};
+  if(t.status==='andamento') return {label:'Em Andamento', cls:'warn'};
+  return {label:'A Fazer', cls:'ok'};
+}
+
+function renderTarefasLista(c, list){
+  if(list.length===0){ c.innerHTML = `<div class="empty-col" style="padding:30px 10px;">Nenhuma tarefa com esses filtros.</div>`; return; }
+  const sorted = [...list].sort((a,b)=>(a.prazo||'9999').localeCompare(b.prazo||'9999'));
+  const visibleIds = sorted.map(t=>t.id);
+
+  if(selectedTaskIds.size>0){
+    const bar = document.createElement('div');
+    bar.className='bulk-bar';
+    bar.innerHTML = `
+      <span class="count">${selectedTaskIds.size} selecionada(s)</span><div class="spacer"></div>
+      <button data-s="afazer">Marcar: A Fazer</button><button data-s="andamento">Marcar: Em Andamento</button>
+      <button data-s="concluido">Marcar: Concluído</button>
+      <button id="bulkDelete" class="danger">Excluir</button><button id="bulkClear">Cancelar</button>`;
+    c.appendChild(bar);
+    bar.querySelectorAll('[data-s]').forEach(b=>b.onclick = ()=>bulkSetStatus(b.dataset.s));
+    bar.querySelector('#bulkDelete').onclick = bulkDeleteTasks;
+    bar.querySelector('#bulkClear').onclick = ()=>{ selectedTaskIds.clear(); render(); };
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'tbl-wrap';
+  const allSelected = visibleIds.every(id=>selectedTaskIds.has(id));
+  wrap.innerHTML = `
+    <table class="tbl" style="min-width:1200px;">
+      <thead><tr>
+        <th style="width:32px;"><input type="checkbox" id="selectAllTasks" ${allSelected?'checked':''}></th>
+        <th>Status</th><th>Criado</th><th>Tarefa</th><th>Tipo</th><th>Instituição</th><th>Projeto</th>
+        <th>Solicitado por</th><th>Responsável</th><th>Prazo</th><th>Lida em</th><th>Pendente com</th><th>Conclusão</th>
+      </tr></thead><tbody></tbody>
+    </table>`;
+  wrap.querySelector('#selectAllTasks').onclick = e=>{
+    visibleIds.forEach(id=> e.target.checked ? selectedTaskIds.add(id) : selectedTaskIds.delete(id));
+    render();
+  };
+  const tbody = wrap.querySelector('tbody');
+  sorted.forEach(t=>{
+    const inst = instById(t.instituicaoId);
+    const proj = inst ? projById(inst.id, t.projetoId) : null;
+    const pendente = t.pendenteLeituraPara ? membroById(t.pendenteLeituraPara) : null;
+    const info = statusColorInfo(t);
+    const checked = selectedTaskIds.has(t.id);
+    const tr = document.createElement('tr');
+    tr.className = 'click';
+    if(checked) tr.style.background='var(--gold-soft)';
+    tr.innerHTML = `
+      <td style="text-align:center;"><input type="checkbox" class="rowCheck" ${checked?'checked':''}></td>
+      <td><span class="badge ${info.cls}">${info.label}</span></td>
+      <td class="mono small muted">${t.criadoEm?fmtDateTime(t.criadoEm):'—'}</td>
+      <td style="font-weight:${t.naoLidoPara?700:400};">${t.naoLidoPara?'<span class="unread-dot"></span>':''}${t.recorrencia?'🔁 ':''}${escapeHtml(t.titulo)}</td>
+      <td>${escapeHtml(t.tipo||'Outro')}</td>
+      <td>${inst?`<span title="${escapeAttr(inst.nome)}">${escapeHtml(instLabel(inst))}</span>`:'—'}</td>
+      <td>${proj?escapeHtml(projLabel(proj)):'<span class="muted">Geral</span>'}</td>
+      <td>${avatarBadge(membroById(t.solicitanteId))||'—'}</td>
+      <td>${avatarBadge(membroById(t.responsavelId))||'—'}</td>
+      <td class="mono">${t.prazo?fmtDate(t.prazo):'—'}</td>
+      <td class="mono small muted">${t.ultimaLeituraEm?fmtDateTime(t.ultimaLeituraEm):'—'}</td>
+      <td>${pendente?`<span style="display:inline-flex;align-items:center;gap:6px;">${avatarBadge(pendente)}<span class="mono muted" style="font-size:11.5px;">${t.pendenteDesde?fmtDate(t.pendenteDesde):'—'}</span></span>`:'<span class="muted">—</span>'}</td>
+      <td class="mono small muted">${t.concluidoEm?fmtDateTime(t.concluidoEm):'—'}</td>`;
+    tr.querySelectorAll('td:not(:first-child)').forEach(td=> td.onclick = ()=>openTaskModal(t.id));
+    tr.querySelector('.rowCheck').onclick = e=>{ e.target.checked ? selectedTaskIds.add(t.id) : selectedTaskIds.delete(t.id); render(); };
+    tbody.appendChild(tr);
+  });
+  c.appendChild(wrap);
+}
+
+function renderTarefasBoard(c, list){
+  const board = document.createElement('div');
+  board.className = 'board';
+  STATUS_COLS.forEach(col=>{
+    const colEl = document.createElement('div');
+    colEl.className='col';
+    const items = list.filter(t=>t.status===col.id).sort((a,b)=>(a.prazo||'9999').localeCompare(b.prazo||'9999'));
+    colEl.innerHTML = `<div class="col-head"><h3>${col.label}</h3><span class="n">${items.length}</span></div>`;
+    if(items.length===0) colEl.innerHTML += `<div class="empty-col">—</div>`;
+    else items.forEach(t=>colEl.appendChild(renderCard(t)));
+    board.appendChild(colEl);
+  });
+  c.appendChild(board);
+}
+
+function renderCard(t){
+  const inst = instById(t.instituicaoId);
+  const proj = inst ? projById(inst.id, t.projetoId) : null;
+  const resp = membroById(t.responsavelId);
+  const du = t.prazo ? daysUntil(t.prazo) : null;
+  let dueClass = '';
+  if(du!==null && t.status!=='concluido'){ if(du<0) dueClass='overdue'; else if(du<=5) dueClass='soon'; }
+  const card = document.createElement('div');
+  card.className='card';
+  if(inst) card.style.setProperty('--inst-color', inst.cor);
+  card.innerHTML = `
+    <div class="tags">
+      <span class="tag type">${escapeHtml(t.tipo||'Outro')}</span>
+      ${inst?`<span class="tag">${escapeHtml(instLabel(inst))}${proj?` · ${escapeHtml(proj.codigo||proj.nome)}`:''}</span>`:''}
+    </div>
+    <h4 style="font-weight:${t.naoLidoPara?800:500};">${t.naoLidoPara?'<span class="unread-dot"></span>':''}${t.recorrencia?'🔁 ':''}${escapeHtml(t.titulo)}</h4>
+    ${t.checklist.length ? `<div style="font-size:11px;color:var(--muted);margin:-4px 0 2px;">☑ ${t.checklist.filter(i=>i.feito).length}/${t.checklist.length} do checklist</div>` : ''}
+    <div class="meta">
+      <div class="who">${resp?avatarBadge(resp):'<span class="avatar">?</span>'}<span>${resp?escapeHtml(resp.nome.split(' ')[0]):'sem responsável'}</span></div>
+      <span class="due ${dueClass}">${t.prazo? fmtDate(t.prazo) : 'sem prazo'}</span>
+    </div>`;
+  card.onclick = ()=>openTaskModal(t.id);
+  return card;
+}
+
+function openTaskModal(taskId){
+  if(state.instituicoes.length===0){ toast('Cadastre pelo menos uma instituição antes (aba Instituições).'); return; }
+  const isNew = !taskId;
+  const me = isNew ? ensureCurrentMembro() : currentMembro();
+  const t = isNew ? {
+    id: uid(), titulo:'', tipo: state.tiposTarefa[0],
+    instituicaoId: filters.inst || state.instituicoes[0].id, projetoId: filters.proj || '',
+    solicitanteId: me?me.id:'', responsavelId:'', prazo:'', status:'afazer', descricao:'', recorrencia:null,
+    pendenteLeituraPara:null, ultimaLeituraPor:null, ultimaLeituraEm:null, chat:[], criadoEm:null,
+    pendenteDesde:null, concluidoEm:null, naoLidoPara:null, checklist:[]
+  } : state.tarefas.find(x=>x.id===taskId);
+  if(!t) return;
+  const originalStatus = isNew ? null : t.status;
+  const originalResponsavelId = isNew ? null : t.responsavelId;
+  const draftChecklist = t.checklist.map(i=>({...i})); // só grava ao salvar (ou na hora, se a tarefa já existe)
+
+  // Abrir a tarefa tira o "não lida", mas não tira o "Pendente com" (isso só muda com resposta no chat).
+  if(!isNew && me && t.naoLidoPara===me.id){
+    t.naoLidoPara = null;
+    t.ultimaLeituraPor = me.id;
+    t.ultimaLeituraEm = new Date().toISOString();
+    scheduleSave(); render();
+  }
+
+  const rec = t.recorrencia || null;
+  const overlay = makeModal(isNew?'Nova tarefa':'Editar tarefa', `
+    <div class="field"><label>Título da solicitação</label>
+      <input id="f_titulo" placeholder="Ex.: Contrato de prestação de serviço — oficineiro X" value="${escapeAttr(t.titulo)}"></div>
+    <div class="field-row">
+      <div class="field"><label>Tipo</label>
+        <div style="display:flex;gap:6px;">
+          <select id="f_tipo" style="flex:1;min-width:0;">${state.tiposTarefa.map(ti=>`<option ${t.tipo===ti?'selected':''}>${escapeHtml(ti)}</option>`).join('')}</select>
+          <button type="button" class="btn ghost small" id="f_tipo_add" title="Cadastrar novo tipo" style="flex:none;padding:0 12px;">+</button>
+        </div>
+      </div>
+      <div class="field"><label>Prazo</label><input id="f_prazo" type="date" value="${t.prazo||''}"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Instituição</label>
+        <select id="f_inst">${state.instituicoes.map(i=>`<option value="${i.id}" ${t.instituicaoId===i.id?'selected':''}>${escapeHtml(instLabel(i))}</option>`).join('')}</select></div>
+      <div class="field"><label>Projeto</label><select id="f_proj"></select></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Solicitado por 🔒</label>
+        ${(()=>{ const s = membroById(t.solicitanteId); return `<div id="f_solic" style="display:flex;align-items:center;gap:8px;padding:8px 11px;border:1px solid var(--line);border-radius:8px;background:var(--paper-dim);min-height:38px;cursor:not-allowed;" title="Definido automaticamente — não pode ser alterado">${s?avatarBadge(s)+`<span>${escapeHtml(s.nome)}</span>`:'<span class="muted">—</span>'}</div>`; })()}
+        <div class="hint" style="margin:4px 0 0;">${isNew?'Preenchido automaticamente com o usuário logado.':'Quem criou a tarefa. Não pode ser alterado.'}</div></div>
+      <div class="field"><label>Responsável por executar</label>
+        <select id="f_resp"><option value="">—</option>${state.membros.map(m=>`<option value="${m.id}" ${t.responsavelId===m.id?'selected':''}>${escapeHtml(m.nome)}</option>`).join('')}</select></div>
+    </div>
+    <div class="field"><label>Detalhes / orientações</label>
+      <textarea id="f_desc" placeholder="Ex.: função, carga horária, valores, período de contratação...">${escapeHtml(t.descricao||'')}</textarea></div>
+
+    <div class="field">
+      <label>Checklist <span id="f_chk_prog" style="font-weight:400;text-transform:none;letter-spacing:0;"></span></label>
+      <div id="f_chk_list" style="display:flex;flex-direction:column;gap:6px;"></div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <input id="f_chk_input" placeholder="Novo item do checklist..." style="flex:1;">
+        <button type="button" class="btn small" id="f_chk_add">Adicionar</button>
+      </div>
+      <div class="hint" style="margin:4px 0 0;">O checklist é só apoio — marcar todos os itens não conclui a tarefa.</div>
+    </div>
+
+    <div class="field"><label style="display:flex;align-items:center;gap:7px;text-transform:none;font-size:13px;color:var(--ink);">
+      <input type="checkbox" id="f_recorrente" ${rec?'checked':''} style="width:auto;"> Tarefa recorrente</label></div>
+    <div class="field-row" id="f_rec_wrap" style="display:${rec?'grid':'none'};">
+      <div class="field"><label>Repetir</label>
+        <select id="f_rec_tipo">
+          ${[['dias','A cada X dias'],['semanal','Semanalmente'],['quinzenal','Quinzenalmente'],['mensal','Mensalmente'],['bimestral','Bimestralmente'],['semestral','Semestralmente']]
+            .map(([v,l])=>`<option value="${v}" ${rec&&rec.tipo===v?'selected':''}>${l}</option>`).join('')}
+        </select></div>
+      <div class="field" id="f_rec_dias_wrap"><label>A cada quantos dias</label>
+        <input type="number" min="1" id="f_rec_dias" value="${rec&&rec.valor?rec.valor:7}"></div>
+    </div>
+
+    <div class="field"><label>Status</label>
+      <div class="status-picker" id="f_status">${STATUS_COLS.map(sc=>`<button type="button" data-s="${sc.id}" class="${t.status===sc.id?'active':''}">${sc.label}</button>`).join('')}</div></div>
+
+    ${!isNew?`
+    <div class="hint" id="f_leitura" style="margin:-6px 0 0;"></div>
+    <div class="field"><label>Chat da tarefa</label>
+      <div id="f_chat_list" style="max-height:200px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--white);display:flex;flex-direction:column;gap:8px;"></div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <input id="f_chat_input" placeholder="Escreva uma dúvida ou resposta..." style="flex:1;">
+        <button class="btn small" id="f_chat_send">Enviar</button>
+      </div></div>`:''}
+
+    <div class="modal-actions">
+      <div>${!isNew?`<button class="btn danger small" id="f_del">Excluir</button>`:''}</div>
+      <div style="display:flex;gap:8px;"><button class="btn ghost" data-close>Cancelar</button>
+        <button class="btn" id="f_save">${isNew?'Criar tarefa':'Salvar'}</button></div>
+    </div>`);
+
+  const instSel = overlay.querySelector('#f_inst');
+  const projSel = overlay.querySelector('#f_proj');
+  const refreshProj = sel=>{ projSel.innerHTML = projOptionsHtml(instById(instSel.value), sel, '— Geral da instituição —'); };
+  refreshProj(t.projetoId);
+  instSel.onchange = ()=>refreshProj('');
+
+  overlay.querySelector('#f_tipo_add').onclick = ()=>openQuickTipoModal(nome=>{
+    overlay.querySelector('#f_tipo').innerHTML = state.tiposTarefa.map(ti=>`<option ${ti===nome?'selected':''}>${escapeHtml(ti)}</option>`).join('');
+  });
+
+  // Checklist
+  const chkList = overlay.querySelector('#f_chk_list'), chkProg = overlay.querySelector('#f_chk_prog');
+  function commitChecklist(){ if(!isNew){ t.checklist = draftChecklist.map(i=>({...i})); scheduleSave(); } }
+  function renderChecklist(){
+    const total = draftChecklist.length, done = draftChecklist.filter(i=>i.feito).length;
+    chkProg.textContent = total ? `— ${done} de ${total} concluído(s)` : '';
+    if(!total){ chkList.innerHTML = `<div class="hint" style="margin:0;">Nenhum item ainda.</div>`; return; }
+    chkList.innerHTML = draftChecklist.map(item=>`
+      <label style="display:flex;align-items:center;gap:8px;font-size:13.5px;padding:6px 8px;border:1px solid var(--line-soft);border-radius:7px;background:${item.feito?'var(--paper-dim)':'var(--white)'};text-transform:none;letter-spacing:0;font-weight:400;color:var(--ink);margin:0;">
+        <input type="checkbox" data-id="${item.id}" class="chk-item" ${item.feito?'checked':''} style="width:auto;">
+        <span style="flex:1;${item.feito?'text-decoration:line-through;color:var(--muted);':''}">${escapeHtml(item.texto)}</span>
+        <button type="button" class="icon-btn del chk-del" data-id="${item.id}" title="Remover item">✕</button>
+      </label>`).join('');
+    chkList.querySelectorAll('.chk-item').forEach(cb=>cb.onchange = ()=>{
+      const it = draftChecklist.find(i=>i.id===cb.dataset.id); if(it){ it.feito = cb.checked; commitChecklist(); renderChecklist(); }
+    });
+    chkList.querySelectorAll('.chk-del').forEach(b=>b.onclick = e=>{
+      e.preventDefault();
+      const idx = draftChecklist.findIndex(i=>i.id===b.dataset.id); if(idx>=0) draftChecklist.splice(idx,1);
+      commitChecklist(); renderChecklist();
+    });
+  }
+  renderChecklist();
+  const chkInput = overlay.querySelector('#f_chk_input');
+  const addChk = ()=>{ const tx = chkInput.value.trim(); if(!tx) return; draftChecklist.push({id:uid(), texto:tx, feito:false}); chkInput.value=''; commitChecklist(); renderChecklist(); };
+  overlay.querySelector('#f_chk_add').onclick = addChk;
+  chkInput.onkeydown = e=>{ if(e.key==='Enter'){ e.preventDefault(); addChk(); } };
+
+  // Recorrência
+  const recCheckbox = overlay.querySelector('#f_recorrente'), recWrap = overlay.querySelector('#f_rec_wrap');
+  const recTipoSel = overlay.querySelector('#f_rec_tipo'), recDiasWrap = overlay.querySelector('#f_rec_dias_wrap');
+  const syncDias = ()=>{ recDiasWrap.style.display = recTipoSel.value==='dias' ? 'block' : 'none'; };
+  recCheckbox.onchange = ()=>{ recWrap.style.display = recCheckbox.checked ? 'grid' : 'none'; syncDias(); };
+  recTipoSel.onchange = syncDias;
+  syncDias();
+
+  // Chat
+  if(!isNew){
+    const leitura = overlay.querySelector('#f_leitura');
+    const quem = t.ultimaLeituraPor ? membroById(t.ultimaLeituraPor) : null;
+    leitura.textContent = t.ultimaLeituraEm ? `Última leitura: ${quem?quem.nome:'—'} em ${fmtDateTime(t.ultimaLeituraEm)}` : 'Ainda não foi lida por ninguém.';
+    const chatList = overlay.querySelector('#f_chat_list');
+    function renderChat(){
+      if(!t.chat.length){ chatList.innerHTML = `<div class="hint" style="margin:0;">Nenhuma mensagem ainda.</div>`; return; }
+      chatList.innerHTML = t.chat.map(msg=>{
+        const autor = msg.autorId ? membroById(msg.autorId) : null;
+        return `<div style="background:var(--paper-dim);border-radius:8px;padding:7px 10px;display:flex;gap:8px;align-items:flex-start;">
+          <span class="avatar" style="background:${autor?membroColor(autor):'var(--ink)'};color:#2b2f38;">${initials(msg.autorNome||'—')}</span>
+          <div><div style="font-size:11.5px;font-weight:700;">${escapeHtml(msg.autorNome||'—')} <span style="font-weight:400;color:var(--muted);">· ${fmtDateTime(msg.criadoEm)}</span></div>
+          <div style="font-size:13px;margin-top:2px;white-space:pre-wrap;word-break:break-word;">${linkifyText(msg.texto)}</div></div></div>`;
+      }).join('');
+      chatList.scrollTop = chatList.scrollHeight;
+    }
+    renderChat();
+    const chatInput = overlay.querySelector('#f_chat_input');
+    const send = ()=>{
+      const texto = chatInput.value.trim();
+      if(!texto) return;
+      const autorId = me ? me.id : null;
+      t.chat.push({id:uid(), autorId, autorNome: me ? me.nome : (session?session.nome:'—'), texto, criadoEm:new Date().toISOString()});
+      chatInput.value = '';
+      if(autorId && autorId===t.responsavelId && t.solicitanteId && t.solicitanteId!==autorId){
+        setPendente(t, t.solicitanteId);
+        apiNotify('duvida_tarefa', membroById(t.solicitanteId), t.titulo);
+      } else if(autorId && autorId===t.solicitanteId && t.responsavelId && t.responsavelId!==autorId){
+        setPendente(t, t.responsavelId);
+        apiNotify('duvida_respondida', membroById(t.responsavelId), t.titulo);
+      }
+      renderChat(); scheduleSave(); render();
+    };
+    overlay.querySelector('#f_chat_send').onclick = send;
+    chatInput.onkeydown = e=>{ if(e.key==='Enter'){ e.preventDefault(); send(); } };
+  }
+
+  let curStatus = t.status;
+  overlay.querySelectorAll('#f_status button').forEach(b=>b.onclick=()=>{
+    curStatus = b.dataset.s;
+    overlay.querySelectorAll('#f_status button').forEach(x=>x.classList.toggle('active', x===b));
+  });
+
+  if(!isNew){
+    overlay.querySelector('#f_del').onclick = ()=>{
+      if(!confirm('Excluir esta tarefa?')) return;
+      state.tarefas = state.tarefas.filter(x=>x.id!==t.id);
+      scheduleSave(); overlay.remove(); render(); toast('Tarefa excluída.');
+    };
+  }
+
+  overlay.querySelector('#f_save').onclick = ()=>{
+    const titulo = overlay.querySelector('#f_titulo').value.trim();
+    const tipoVal = overlay.querySelector('#f_tipo').value;
+    const prazo = overlay.querySelector('#f_prazo').value;
+    // Solicitante: na criação é sempre o usuário logado; na edição, mantém o original. Não vem da tela.
+    const solicVal = isNew ? (me ? me.id : '') : t.solicitanteId;
+    const respVal = overlay.querySelector('#f_resp').value;
+    const faltando = [];
+    if(!titulo) faltando.push('Título');
+    if(!tipoVal) faltando.push('Tipo');
+    if(!prazo) faltando.push('Prazo');
+    if(!instSel.value) faltando.push('Instituição');
+    if(!solicVal && isNew) faltando.push('Solicitado por (usuário logado não identificado — saia e entre de novo)');
+    if(!respVal) faltando.push('Responsável');
+    if(faltando.length){ toast('Preencha: ' + faltando.join(', ')); return; }
+
+    Object.assign(t, {titulo, tipo:tipoVal, prazo, instituicaoId:instSel.value, projetoId:projSel.value,
+      solicitanteId:solicVal, responsavelId:respVal, descricao: overlay.querySelector('#f_desc').value});
+    t.checklist = draftChecklist.map(i=>({...i}));
+    if(isNew) t.criadoEm = new Date().toISOString();
+    if(curStatus==='concluido' && originalStatus!=='concluido') t.concluidoEm = new Date().toISOString();
+    else if(curStatus!=='concluido' && originalStatus==='concluido') t.concluidoEm = null;
+    t.status = curStatus;
+    if(isNew || t.responsavelId !== originalResponsavelId) setPendente(t, t.responsavelId);
+    if(recCheckbox.checked){
+      const tipo = recTipoSel.value;
+      t.recorrencia = tipo==='dias' ? {tipo, valor: parseInt(overlay.querySelector('#f_rec_dias').value)||1} : {tipo};
+    } else t.recorrencia = null;
+
+    if(isNew) state.tarefas.push(t);
+    maybeGenerateNextRecurrence(t, originalStatus, curStatus);
+    if(isNew){
+      filters = {inst:'',proj:'',resp:'',status:'',tipo:'',busca:''};
+      apiNotify('tarefa_nova', membroById(t.responsavelId), t.titulo);
+    } else if(t.responsavelId !== originalResponsavelId){
+      apiNotify('tarefa_nova', membroById(t.responsavelId), t.titulo);
+    }
+    scheduleSave(); overlay.remove(); render();
+    toast(isNew?'Tarefa criada.':'Tarefa atualizada.');
+  };
+}
+
+// Cadastro rápido de uma nova opção numa lista (Tipo de tarefa, Origem do projeto...).
+// Ignora duplicados que só diferem em maiúsculas/minúsculas ou espaços: nesse caso usa a opção já existente.
+function openQuickOptionModal(cfg){
+  const overlay = makeModal(cfg.titulo, `
+    <div class="field"><label>${cfg.label}</label><input id="qt_nome" placeholder="${escapeAttr(cfg.placeholder||'')}"></div>
+    <div id="qt_msg" class="hint" style="margin:-6px 0 0;display:none;"></div>
+    <div class="modal-actions" style="justify-content:flex-end;"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="qt_save">Adicionar</button></div>`, 340);
+  overlay.style.zIndex = '300';
+  const inp = overlay.querySelector('#qt_nome');
+  inp.focus();
+  const save = ()=>{
+    const nome = inp.value.trim().replace(/\s+/g,' ');
+    if(!nome) return;
+    const lista = cfg.lista();
+    const existente = lista.find(x=>normalizeStr(x)===normalizeStr(nome));
+    if(existente){
+      overlay.remove(); cfg.onAdded(existente); toast(`"${existente}" já existe — selecionada.`);
+      return;
+    }
+    lista.push(nome); scheduleSave();
+    overlay.remove(); cfg.onAdded(nome); toast(cfg.okMsg);
+  };
+  overlay.querySelector('#qt_save').onclick = save;
+  inp.onkeydown = e=>{ if(e.key==='Enter'){ e.preventDefault(); save(); } };
+}
+function openNovoStatusModal(onAdded){
+  const overlay = makeModal('Novo status de projeto', `
+    <div class="field"><label>Nome do status</label><input id="ns_nome" placeholder="Ex.: Aguardando repasse" maxlength="60"></div>
+    <div class="field"><label style="display:flex;align-items:center;gap:7px;text-transform:none;font-size:13px;color:var(--ink);letter-spacing:0;">
+      <input type="checkbox" id="ns_acomp" style="width:auto;"> Exige acompanhamento de prazos</label>
+      <div class="hint" style="margin:4px 0 0;">Se marcado, os projetos nesse status entram em "Projetos em acompanhamento", no topo.</div></div>
+    <div class="modal-actions" style="justify-content:flex-end;"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="ns_save">Adicionar</button></div>`, 380);
+  overlay.style.zIndex = '300';
+  const inp = overlay.querySelector('#ns_nome');
+  inp.focus();
+  const save = ()=>{
+    const nome = inp.value.trim().replace(/\s+/g,' ');
+    if(!nome) return;
+    const existente = allProjStatus().find(s=>normalizeStr(s.label)===normalizeStr(nome) || normalizeStr(s.curto)===normalizeStr(nome));
+    if(existente){ overlay.remove(); onAdded(existente.id); toast(`"${existente.label}" já existe — selecionado.`); return; }
+    const acomp = overlay.querySelector('#ns_acomp').checked;
+    const novo = {id:'st_'+uid(), label:nome, curto:nome, cls: acomp?'warn':'info', acomp};
+    state.statusProjetoExtras.push(novo);
+    scheduleSave();
+    overlay.remove(); onAdded(novo.id); render(); toast('Status adicionado.');
+  };
+  overlay.querySelector('#ns_save').onclick = save;
+  inp.onkeydown = e=>{ if(e.key==='Enter'){ e.preventDefault(); save(); } };
+}
+function openQuickTipoModal(onAdded){
+  openQuickOptionModal({titulo:'Novo tipo de tarefa', label:'Nome do tipo', placeholder:'Ex.: Recibo',
+    lista:()=>state.tiposTarefa, onAdded, okMsg:'Tipo adicionado.'});
+}
+function openQuickOrigemModal(onAdded){
+  openQuickOptionModal({titulo:'Nova origem de projeto', label:'Nome da origem', placeholder:'Ex.: Emenda parlamentar',
+    lista:()=>state.origensProjeto, onAdded, okMsg:'Origem adicionada.'});
+}
+
+function maybeGenerateNextRecurrence(t, prevStatus, newStatus){
+  if(!(newStatus==='concluido' && prevStatus!=='concluido' && t.recorrencia && t.prazo)) return;
+  const proximoPrazo = nextDateForRecurrence(t.prazo, t.recorrencia);
+  if(!proximoPrazo) return;
+  const agora = new Date().toISOString();
+  const nova = {
+    id: uid(), titulo: t.titulo, tipo: t.tipo, instituicaoId: t.instituicaoId, projetoId: t.projetoId,
+    solicitanteId: t.solicitanteId, responsavelId: t.responsavelId, prazo: proximoPrazo, status: 'afazer',
+    descricao: t.descricao, recorrencia: t.recorrencia,
+    pendenteLeituraPara: t.responsavelId || null, ultimaLeituraPor: null, ultimaLeituraEm: null, chat: [],
+    criadoEm: agora, pendenteDesde: t.responsavelId ? agora : null, concluidoEm: null,
+    naoLidoPara: t.responsavelId || null, checklist: t.checklist.map(i=>({id:uid(), texto:i.texto, feito:false}))
+  };
+  state.tarefas.push(nova);
+  apiNotify('tarefa_nova', membroById(nova.responsavelId), nova.titulo);
+}
+
+function bulkSetStatus(newStatus){
+  selectedTaskIds.forEach(id=>{
+    const t = state.tarefas.find(x=>x.id===id);
+    if(!t) return;
+    const prev = t.status;
+    if(newStatus==='concluido' && prev!=='concluido') t.concluidoEm = new Date().toISOString();
+    else if(newStatus!=='concluido' && prev==='concluido') t.concluidoEm = null;
+    t.status = newStatus;
+    maybeGenerateNextRecurrence(t, prev, newStatus);
+  });
+  selectedTaskIds.clear();
+  scheduleSave(); render(); toast('Status atualizado em massa.');
+}
+function bulkDeleteTasks(){
+  if(!confirm(`Excluir ${selectedTaskIds.size} tarefa(s) selecionada(s)? Essa ação não pode ser desfeita.`)) return;
+  state.tarefas = state.tarefas.filter(t=>!selectedTaskIds.has(t.id));
+  selectedTaskIds.clear();
+  scheduleSave(); render(); toast('Tarefas excluídas.');
+}
+function nextDateForRecurrence(dateStr, rec){
+  const d = new Date(dateStr+'T00:00:00');
+  if(isNaN(d)) return null;
+  switch(rec.tipo){
+    case 'dias': d.setDate(d.getDate() + (parseInt(rec.valor)||1)); break;
+    case 'semanal': d.setDate(d.getDate()+7); break;
+    case 'quinzenal': d.setDate(d.getDate()+15); break;
+    case 'mensal': d.setMonth(d.getMonth()+1); break;
+    case 'bimestral': d.setMonth(d.getMonth()+2); break;
+    case 'semestral': d.setMonth(d.getMonth()+6); break;
+    default: return null;
+  }
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+}
+
+/* ================== PROJETOS ================== */
+function renderProjetos(c){
+  if(state.instituicoes.length===0){
+    c.innerHTML = `<div class="empty-state"><div class="big">Nenhuma instituição cadastrada</div><div>Cadastre as instituições primeiro (aba "Instituições") — cada projeto pertence a uma instituição.</div></div>`;
+    return;
+  }
+  const f = projFilters;
+  const filterBar = document.createElement('div');
+  filterBar.className = 'filters';
+  filterBar.innerHTML = `
+    <input type="text" id="pBusca" placeholder="🔎 Buscar projeto ou código..." value="${escapeAttr(f.busca)}">
+    <select id="pInst"><option value="">Todas instituições</option>${state.instituicoes.map(i=>`<option value="${i.id}" ${f.inst===i.id?'selected':''}>${escapeHtml(instLabel(i))}</option>`).join('')}</select>
+    <select id="pOrigem"><option value="">Todas origens</option>${state.origensProjeto.map(o=>`<option ${f.origem===o?'selected':''}>${escapeHtml(o)}</option>`).join('')}</select>
+    <label class="chk"><input type="checkbox" id="pFin" ${f.finalizados?'checked':''}> mostrar finalizados</label>
+    <div class="spacer"></div>
+    ${(f.inst||f.origem||f.busca||f.status) ? `<button class="chip-clear" id="pClear">limpar filtros</button>` : ''}
+  `;
+  c.appendChild(filterBar);
+  const pb = filterBar.querySelector('#pBusca');
+  pb.oninput = e=>{ f.busca = e.target.value; const pos = e.target.selectionStart; render(); requestAnimationFrame(()=>{ const n=document.getElementById('pBusca'); if(n){ n.focus(); n.setSelectionRange(pos,pos);} }); };
+  filterBar.querySelector('#pInst').onchange = e=>{ f.inst = e.target.value; render(); };
+  filterBar.querySelector('#pOrigem').onchange = e=>{ f.origem = e.target.value; render(); };
+  filterBar.querySelector('#pFin').onchange = e=>{ f.finalizados = e.target.checked; render(); };
+  const pc = filterBar.querySelector('#pClear');
+  if(pc) pc.onclick = ()=>{ projFilters = {inst:'', status:'', origem:'', busca:'', finalizados:false}; render(); };
+
+  // base (sem o filtro de status) — usada para as contagens dos chips
+  const base = allProjects().filter(({inst,p})=>{
+    if(f.inst && inst.id!==f.inst) return false;
+    if(f.origem && p.origem!==f.origem) return false;
+    if(f.busca){ const q = normalizeStr(f.busca); if(!normalizeStr(p.nome).includes(q) && !normalizeStr(p.codigo).includes(q)) return false; }
+    return true;
+  });
+  const chips = document.createElement('div');
+  chips.className = 'chips';
+  const nAcomp = base.filter(x=>statusById(x.p.status).acomp).length;
+  chips.innerHTML = `
+    <button class="chip ${!f.status?'active':''}" data-st="">Todos<span class="n">${base.filter(x=>f.finalizados||x.p.status!=='finalizado').length}</span></button>
+    <button class="chip acomp ${f.status==='acomp'?'active':''}" data-st="acomp" title="Em tramitação ou em alteração de plano">⚑ Em acompanhamento<span class="n">${nAcomp}</span></button>
+    ${allProjStatus().map(s=>`<button class="chip ${f.status===s.id?'active':''}" data-st="${s.id}">${escapeHtml(s.curto)}<span class="n">${base.filter(x=>x.p.status===s.id).length}</span></button>`).join('')}
+  `;
+  chips.querySelectorAll('.chip').forEach(b=>b.onclick = ()=>{ f.status = b.dataset.st; render(); });
+  c.appendChild(chips);
+
+  const order = id=>allProjStatus().findIndex(s=>s.id===id);
+  const list = base.filter(({p})=>{
+    if(f.status==='acomp') return statusById(p.status).acomp;
+    if(f.status) return p.status===f.status;
+    return f.finalizados || p.status!=='finalizado';
+  }).sort((a,b)=> instLabel(a.inst).localeCompare(instLabel(b.inst)) || order(a.p.status)-order(b.p.status) || a.p.nome.localeCompare(b.p.nome));
+
+  if(list.length===0){
+    const e = document.createElement('div');
+    e.className = 'empty-state';
+    e.innerHTML = allProjects().length===0
+      ? `<div class="big">Nenhum projeto cadastrado</div><div>Use "+ Novo projeto" para cadastrar o primeiro.</div>`
+      : `<div>Nenhum projeto com esses filtros.</div>`;
+    c.appendChild(e);
+    return;
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'tbl-wrap';
+  wrap.innerHTML = `
+    <table class="tbl" style="min-width:980px;">
+      <thead><tr><th>Instituição</th><th>Projeto</th><th>Código</th><th>Origem</th><th>Vigência</th><th>Status</th><th>Desde</th></tr></thead>
+      <tbody>${list.map(({inst,p})=>{
+        const dFim = p.fim ? daysUntil(p.fim) : null;
+        let fimNote = '';
+        if(p.status!=='finalizado' && dFim!==null){
+          if(dFim<0) fimNote = `<div class="small" style="color:var(--bad);">vigência encerrada</div>`;
+          else if(dFim<=60) fimNote = `<div class="small" style="color:#8a6420;">termina em ${dFim}d</div>`;
+        }
+        const alt = (p.status==='alteracao'||p.status==='alteracao_aprovada') && p.alteracaoTipos.length
+          ? `<div class="small muted" style="margin-top:3px;">${p.alteracaoTipos.map(escapeHtml).join(' · ')}</div>` : '';
+        return `<tr class="click" data-inst="${inst.id}" data-proj="${p.id}">
+          <td><span style="display:inline-flex;align-items:center;gap:7px;"><span class="inst-swatch" style="background:${inst.cor}"></span><span title="${escapeAttr(inst.nome)}">${escapeHtml(instLabel(inst))}</span></span></td>
+          <td style="font-weight:600;">${escapeHtml(p.nome)}${p.registros.length?`<div class="small muted" style="font-weight:400;" title="Registros no Histórico do Projeto">📝 ${p.registros.length} registro${p.registros.length>1?'s':''} · último ${fmtDate(p.registros[p.registros.length-1].criadoEm)}</div>`:''}</td>
+          <td class="mono">${escapeHtml(p.codigo)||'<span class="muted">—</span>'}</td>
+          <td>${escapeHtml(p.origem)||'<span class="muted">—</span>'}</td>
+          <td class="mono small">${fmtDate(p.inicio)} → ${fmtDate(p.fim)}${fimNote}</td>
+          <td>${projBadge(p)}${alt}</td>
+          <td class="mono small muted">${p.statusDesde?fmtDate(p.statusDesde):'—'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  wrap.querySelectorAll('tbody tr').forEach(tr=>tr.onclick = ()=>openProjModal(tr.dataset.inst, tr.dataset.proj));
+  c.appendChild(wrap);
+}
+
+function openProjModal(instId, projId){
+  if(state.instituicoes.length===0){ toast('Cadastre uma instituição primeiro.'); return; }
+  const isNew = !projId;
+  const inst0 = instById(instId) || state.instituicoes[0];
+  const orig = isNew ? null : projById(inst0.id, projId);
+  if(!isNew && !orig) return;
+  const p = isNew
+    ? {id:uid(), nome:'', codigo:'', origem:'', inicio:'', fim:'', status:'proposta', statusDesde:'', historico:[], alteracaoTipos:[], obs:'', registros:[]}
+    : JSON.parse(JSON.stringify(orig));
+  const me = currentMembro();
+
+  const overlay = makeModal(isNew?'Novo projeto':'Editar projeto', `
+    <div class="field"><label>Instituição</label>
+      <select id="p_inst">${state.instituicoes.map(i=>`<option value="${i.id}" ${inst0.id===i.id?'selected':''}>${escapeHtml(instLabel(i))}</option>`).join('')}</select></div>
+    <div class="field"><label>Nome do projeto</label><input id="p_nome" value="${escapeAttr(p.nome)}" placeholder="Ex.: Arte em Movimento"></div>
+    <div class="field-row">
+      <div class="field"><label>Número / código</label><input id="p_codigo" value="${escapeAttr(p.codigo)}" placeholder="Ex.: 123/2026"></div>
+      <div class="field"><label>Origem do projeto</label>
+        <div style="display:flex;gap:6px;">
+          <select id="p_origem" style="flex:1;min-width:0;"></select>
+          <button type="button" class="btn ghost small" id="p_origem_add" title="Cadastrar nova origem" style="flex:none;padding:0 12px;">+</button>
+        </div></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Início da vigência</label><input id="p_inicio" type="date" value="${p.inicio}"></div>
+      <div class="field"><label>Fim da vigência</label><input id="p_fim" type="date" value="${p.fim}"></div>
+    </div>
+
+    <div class="modal-sub">Situação do projeto</div>
+    <div class="field-row">
+      <div class="field"><label>Status</label>
+        <div style="display:flex;gap:6px;">
+          <select id="p_status" style="flex:1;min-width:0;"></select>
+          <button type="button" class="btn ghost small" id="p_status_add" title="Cadastrar novo status" style="flex:none;padding:0 12px;">+</button>
+        </div></div>
+      <div class="field"><label>Nesse status desde</label><input id="p_desde" type="date" value="${p.statusDesde||todayStr()}"></div>
+    </div>
+    <div class="hint" id="p_status_hint" style="margin:-6px 0 0;"></div>
+    <div class="field" id="p_alt_wrap"><label>Tipo de alteração</label>
+      <div class="check-grid">${ALT_TIPOS.map(a=>`<label><input type="checkbox" class="p_alt" value="${escapeAttr(a)}" ${p.alteracaoTipos.includes(a)?'checked':''}> ${escapeHtml(a)}</label>`).join('')}</div></div>
+    <div class="field"><label>Observações</label><textarea id="p_obs" placeholder="Ex.: diligência respondida em 10/10, aguardando parecer...">${escapeHtml(p.obs)}</textarea></div>
+
+    <div class="modal-sub">Histórico do Projeto</div>
+    <div class="hint" style="margin:-6px 0 0;">Linha do tempo de acontecimentos, decisões e alterações. Cada registro fica salvo com seu nome, data e horário, e não pode ser apagado.</div>
+    <div class="field">
+      <div style="display:flex;gap:8px;align-items:flex-end;">
+        <textarea id="p_reg_input" rows="2" placeholder="Escreva um novo registro... (Enter registra · Shift+Enter quebra linha)" style="flex:1;min-height:0;"></textarea>
+        <button type="button" class="btn small" id="p_reg_send" style="flex:none;">Registrar</button>
+      </div>
+      <div id="p_reg_list" style="margin-top:10px;max-height:260px;overflow-y:auto;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--white);display:flex;flex-direction:column;gap:8px;"></div>
+    </div>
+
+    ${p.historico.length ? `<div class="field"><label>Histórico de status</label><div class="hist">
+      ${[...p.historico].reverse().map(h=>`<div><span class="mono muted" style="min-width:78px;">${fmtDate(h.data)}</span>${(()=>{const s=statusById(h.status);return `<span class="badge ${s.cls}">${escapeHtml(s.curto)}</span>`;})()}<span class="muted">${h.por?'por '+escapeHtml(h.por):''}</span></div>`).join('')}
+    </div></div>` : ''}
+
+    <div class="modal-actions">
+      <div>${!isNew?`<button class="btn danger small" id="p_del">Excluir</button>`:''}</div>
+      <div style="display:flex;gap:8px;"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="p_save">${isNew?'Cadastrar projeto':'Salvar'}</button></div>
+    </div>`);
+
+  // ---- Histórico do Projeto ----
+  const regList = overlay.querySelector('#p_reg_list'), regInput = overlay.querySelector('#p_reg_input');
+  function renderRegistros(){
+    if(!p.registros.length){ regList.innerHTML = `<div class="hint" style="margin:0;">Nenhum registro ainda.</div>`; return; }
+    regList.innerHTML = p.registros.map(r=>{
+      const autor = r.autorId ? membroById(r.autorId) : null;
+      const dt = new Date(r.criadoEm);
+      const quando = isNaN(dt) ? '—' : `${dt.toLocaleDateString('pt-BR')} às ${pad2(dt.getHours())}h${pad2(dt.getMinutes())}`;
+      return `<div style="background:var(--paper-dim);border-radius:8px;padding:7px 10px;display:flex;gap:8px;align-items:flex-start;">
+        <span class="avatar" style="background:${autor?membroColor(autor):'var(--ink)'};color:#2b2f38;">${initials(r.autorNome||'—')}</span>
+        <div style="min-width:0;"><div style="font-size:11.5px;font-weight:700;">${escapeHtml(r.autorNome||'—')} <span style="font-weight:400;color:var(--muted);">— ${quando}</span></div>
+        <div style="font-size:13px;margin-top:2px;white-space:pre-wrap;word-break:break-word;">${linkifyText(r.texto)}</div></div></div>`;
+    }).join('');
+    regList.scrollTop = regList.scrollHeight;
+  }
+  renderRegistros();
+  const registrar = ()=>{
+    const texto = regInput.value.trim();
+    if(!texto) return;
+    const reg = {id:uid(), autorId: me?me.id:null, autorNome: me ? me.nome : (session?session.nome:'—'), texto, criadoEm:new Date().toISOString()};
+    p.registros.push(reg);
+    // Projeto já existente: o registro é gravado na hora, mesmo que a janela seja fechada sem "Salvar".
+    if(!isNew){ orig.registros = orig.registros || []; orig.registros.push({...reg}); scheduleSave(); }
+    regInput.value = '';
+    renderRegistros();
+    if(!isNew) render();
+    toast(isNew ? 'Registro incluído — será salvo ao cadastrar o projeto.' : 'Registro salvo no histórico.');
+  };
+  overlay.querySelector('#p_reg_send').onclick = registrar;
+  regInput.onkeydown = e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); registrar(); } };
+
+  const origemSel = overlay.querySelector('#p_origem');
+  const fillOrigem = sel=>{
+    const opts = [...state.origensProjeto];
+    if(sel && !opts.includes(sel)) opts.push(sel); // preserva origem antiga que não está mais na lista
+    origemSel.innerHTML = `<option value="">—</option>` + opts.map(o=>`<option ${o===sel?'selected':''}>${escapeHtml(o)}</option>`).join('');
+  };
+  fillOrigem(p.origem);
+  overlay.querySelector('#p_origem_add').onclick = ()=>openQuickOrigemModal(nome=>fillOrigem(nome));
+
+  const stSel = overlay.querySelector('#p_status'), desde = overlay.querySelector('#p_desde');
+  const fillStatus = sel=>{
+    stSel.innerHTML = allProjStatus().map(s=>`<option value="${s.id}" ${sel===s.id?'selected':''}>${escapeHtml(s.label)}</option>`).join('');
+  };
+  fillStatus(p.status);
+  overlay.querySelector('#p_status_add').onclick = ()=>openNovoStatusModal(id=>{ fillStatus(id); syncStatusUI(); });
+  const altWrap = overlay.querySelector('#p_alt_wrap'), hint = overlay.querySelector('#p_status_hint');
+  function syncStatusUI(){
+    const s = stSel.value;
+    altWrap.style.display = (s==='alteracao' || s==='alteracao_aprovada') ? 'block' : 'none';
+    hint.textContent = statusById(s).acomp ? '⚑ Este status entra em "Projetos em acompanhamento" no topo — acompanhe diligências e prazos.' : '';
+    if(!isNew && s!==orig.status && desde.value===(orig.statusDesde||'')) desde.value = todayStr();
+  }
+  stSel.onchange = syncStatusUI;
+  syncStatusUI();
+
+  if(!isNew){
+    overlay.querySelector('#p_del').onclick = ()=>{
+      const nTar = state.tarefas.filter(t=>t.projetoId===p.id).length;
+      const nLink = state.links.filter(l=>l.projetoId===p.id).length;
+      const extra = (nTar||nLink) ? `\n\n${nTar} tarefa(s) e ${nLink} link(s) ligados a ele passam para "Geral da instituição".` : '';
+      if(!confirm(`Excluir o projeto "${p.nome}"?${extra}`)) return;
+      const inst = instById(inst0.id);
+      inst.projetos = inst.projetos.filter(x=>x.id!==p.id);
+      state.tarefas.forEach(t=>{ if(t.projetoId===p.id) t.projetoId=''; });
+      state.links.forEach(l=>{ if(l.projetoId===p.id) l.projetoId=''; });
+      scheduleSave(); overlay.remove(); render(); toast('Projeto excluído.');
+    };
+  }
+
+  overlay.querySelector('#p_save').onclick = ()=>{
+    const nome = overlay.querySelector('#p_nome').value.trim();
+    if(!nome){ toast('Informe o nome do projeto.'); return; }
+    const inicio = overlay.querySelector('#p_inicio').value, fim = overlay.querySelector('#p_fim').value;
+    if(inicio && fim && fim < inicio){ toast('O fim da vigência está antes do início.'); return; }
+    const novoStatus = stSel.value;
+    const novoDesde = desde.value || todayStr();
+    p.nome = nome;
+    p.codigo = overlay.querySelector('#p_codigo').value.trim();
+    p.origem = overlay.querySelector('#p_origem').value;
+    p.inicio = inicio; p.fim = fim;
+    p.obs = overlay.querySelector('#p_obs').value;
+    p.alteracaoTipos = (novoStatus==='alteracao'||novoStatus==='alteracao_aprovada')
+      ? [...overlay.querySelectorAll('.p_alt:checked')].map(x=>x.value) : p.alteracaoTipos;
+    if(isNew || novoStatus!==p.status){
+      p.historico.push({status:novoStatus, data:novoDesde, por: me?me.nome:(session?session.nome:'')});
+    } else if(novoDesde!==p.statusDesde && p.historico.length){
+      p.historico[p.historico.length-1].data = novoDesde; // corrigindo a data do status atual
+    }
+    p.status = novoStatus; p.statusDesde = novoDesde;
+
+    const newInstId = overlay.querySelector('#p_inst').value;
+    const oldInst = instById(inst0.id), newInst = instById(newInstId);
+    if(isNew){
+      newInst.projetos.push(p);
+    } else {
+      const idx = oldInst.projetos.findIndex(x=>x.id===p.id);
+      if(newInstId===oldInst.id){ oldInst.projetos[idx] = p; }
+      else {
+        oldInst.projetos.splice(idx,1); newInst.projetos.push(p);
+        state.tarefas.forEach(t=>{ if(t.projetoId===p.id) t.instituicaoId = newInstId; });
+        state.links.forEach(l=>{ if(l.projetoId===p.id) l.instituicaoId = newInstId; });
+      }
+    }
+    scheduleSave(); overlay.remove(); render();
+    toast(isNew?'Projeto cadastrado.':'Projeto atualizado.');
+  };
+}
+
+/* ================== INSTITUIÇÕES ================== */
+const UFS = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+
+// ---- máscaras ----
+const onlyDigits = s=>String(s||'').replace(/\D/g,'');
+function maskCPF(v){
+  const d = onlyDigits(v).slice(0,11);
+  return d.replace(/^(\d{3})(\d)/,'$1.$2').replace(/^(\d{3})\.(\d{3})(\d)/,'$1.$2.$3').replace(/\.(\d{3})(\d{1,2})$/,'.$1-$2');
+}
+function maskCNPJ(v){
+  const d = onlyDigits(v).slice(0,14);
+  return d.replace(/^(\d{2})(\d)/,'$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/,'$1.$2.$3')
+          .replace(/\.(\d{3})(\d)/,'.$1/$2').replace(/(\d{4})(\d{1,2})$/,'$1-$2');
+}
+function maskPhone(v){
+  const d = onlyDigits(v).slice(0,11);
+  if(d.length <= 2) return d.length ? '(' + d : '';
+  if(d.length <= 6) return `(${d.slice(0,2)}) ${d.slice(2)}`;
+  if(d.length <= 10) return `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`;
+  return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`;
+}
+function maskCEP(v){ const d = onlyDigits(v).slice(0,8); return d.length > 5 ? d.slice(0,5) + '-' + d.slice(5) : d; }
+// RG varia por estado: aplica o formato padrão (00.000.000-0) só quando tem 8 ou 9 caracteres;
+// fora disso mantém o que foi digitado (letras, números e dígito X).
+function maskRG(v){
+  const raw = String(v||'').toUpperCase();
+  const c = raw.replace(/[^0-9X]/g,'');
+  if(/^\d{7}[\dX]$/.test(c)) return `${c.slice(0,1)}.${c.slice(1,4)}.${c.slice(4,7)}-${c.slice(7)}`;
+  if(/^\d{8}[\dX]$/.test(c)) return `${c.slice(0,2)}.${c.slice(2,5)}.${c.slice(5,8)}-${c.slice(8)}`;
+  return raw.replace(/[^0-9A-Z.\-\/ ]/g,'').slice(0,20);
+}
+function bindMask(el, fn, liveFn){
+  if(!el) return;
+  if(liveFn) el.addEventListener('input', ()=>{ el.value = liveFn(el.value); });
+  el.addEventListener('blur', ()=>{ el.value = fn(el.value); });
+}
+
+function formatEnd(e){
+  if(!e) return '';
+  const l1 = [e.logradouro, e.numero].filter(Boolean).join(', ');
+  const l2 = [l1, e.complemento].filter(Boolean).join(' — ');
+  const cidadeUf = [e.cidade, e.uf].filter(Boolean).join('/');
+  const partes = [l2, e.bairro, cidadeUf, e.cep ? 'CEP ' + e.cep : ''].filter(Boolean);
+  return partes.join(' · ');
+}
+
+function instResumoTexto(inst){
+  const r = inst.rep, c = inst.contador;
+  const v = x=>x||'—';
+  return [
+    `Instituição: ${inst.nome}`,
+    ...(inst.sigla ? [`Sigla: ${inst.sigla}`] : []),
+    `CNPJ: ${v(inst.cnpj)}`,
+    `E-mail: ${v(inst.email)}`,
+    `Telefone: ${v(inst.telefone)}`,
+    `Endereço: ${v(formatEnd(inst.end))}`,
+    `Data de inscrição: ${inst.dataInscricao?fmtDate(inst.dataInscricao):'—'}`,
+    ``,
+    `Representante legal: ${v(r.nome)}`,
+    `CPF: ${v(r.cpf)}`,
+    `RG: ${v(r.rg)}`,
+    `Profissão: ${v(r.profissao)}`,
+    `Endereço: ${v(formatEnd(r.end))}`,
+    `E-mail: ${v(r.email)}`,
+    `Telefone: ${v(r.telefone)}`,
+    ``,
+    `Contador: ${v(c.nome)}`,
+    `CPF: ${v(c.cpf)}`,
+    `RG: ${v(c.rg)}`,
+    `Profissão: ${v(c.profissao)}`,
+    `CRC: ${c.crcNumero ? (c.crcUf ? c.crcUf + ' ' : '') + c.crcNumero : '—'}`,
+    `E-mail: ${v(c.email)}`,
+    `Telefone: ${v(c.telefone)}`,
+    `Endereço: ${v(formatEnd(c.end))}`
+  ].join('\n');
+}
+
+function renderInstituicoes(c){
+  if(state.instituicoes.length===0){
+    c.innerHTML = `<div class="empty-state"><div class="big">Nenhuma instituição cadastrada</div><div>Use "+ Nova instituição" para cadastrar a primeira, com os dados da instituição, do representante legal e do contador.</div></div>`;
+    return;
+  }
+  const kv = (label, value)=>{
+    const has = !!String(value||'').trim();
+    return `<div class="kv"><span class="k">${label}</span><span class="v ${has?'':'empty'}">${has?escapeHtml(value):'não informado'}</span>
+      ${has?`<button class="icon-btn cp" data-copy="${escapeAttr(value)}" data-label="${escapeAttr(label)}" title="Copiar ${escapeAttr(label)}">📋</button>`:''}</div>`;
+  };
+  state.instituicoes.forEach(inst=>{
+    const r = inst.rep, ct = inst.contador;
+    const block = document.createElement('div');
+    block.className = 'inst-block';
+    block.innerHTML = `
+      <div class="inst-head">
+        <span class="inst-swatch" style="background:${inst.cor}"></span>
+        <h3 title="${escapeAttr(inst.nome)}">${escapeHtml(instLabel(inst))}</h3>
+        ${inst.excluirIndicadores?`<span class="tag" title="Não entra nos indicadores do topo">fora dos indicadores</span>`:''}
+        <div class="actions">
+          <button class="btn ghost small copyAll">📋 Copiar todos os dados</button>
+          <button class="btn ghost small editInst">Editar</button>
+        </div>
+      </div>
+      <div class="inst-body">
+        <div class="kv-col"><h4>Dados da instituição</h4>
+          ${kv('Nome', inst.nome)}${kv('Sigla', inst.sigla)}${kv('CNPJ', inst.cnpj)}${kv('E-mail', inst.email)}${kv('Telefone', inst.telefone)}
+          ${kv('Endereço', formatEnd(inst.end))}${kv('Data de inscrição', inst.dataInscricao?fmtDate(inst.dataInscricao):'')}
+        </div>
+        <div class="kv-col"><h4>Representante legal</h4>
+          ${kv('Nome', r.nome)}${kv('CPF', r.cpf)}${kv('RG', r.rg)}${kv('Profissão', r.profissao)}
+          ${kv('Endereço', formatEnd(r.end))}${kv('E-mail', r.email)}${kv('Telefone', r.telefone)}
+        </div>
+        <div class="kv-col"><h4>Contador</h4>
+          ${kv('Nome', ct.nome)}${kv('CPF', ct.cpf)}${kv('RG', ct.rg)}${kv('Profissão', ct.profissao)}
+          ${kv('CRC', ct.crcNumero ? (ct.crcUf ? ct.crcUf + ' ' : '') + ct.crcNumero : '')}
+          ${kv('E-mail', ct.email)}${kv('Telefone', ct.telefone)}${kv('Endereço', formatEnd(ct.end))}
+        </div>
+      </div>
+      <div class="inst-projs">
+        <span class="small muted" style="text-transform:uppercase;letter-spacing:.04em;font-weight:600;">Projetos</span>
+        ${inst.projetos.length ? inst.projetos.map(p=>`<span class="proj-pill" data-proj="${p.id}">${escapeHtml(projLabel(p))} ${projBadge(p)}</span>`).join('') : '<span class="small muted">nenhum ainda</span>'}
+        <button class="btn ghost small addProj">+ projeto</button>
+      </div>`;
+    block.querySelectorAll('.cp').forEach(b=>b.onclick = ()=>copyText(b.dataset.copy, `${b.dataset.label} copiado!`));
+    block.querySelector('.copyAll').onclick = ()=>copyText(instResumoTexto(inst), `Dados de ${instLabel(inst)} copiados!`);
+    block.querySelector('.editInst').onclick = ()=>openInstModal(inst.id);
+    block.querySelector('.addProj').onclick = ()=>openProjModal(inst.id, null);
+    block.querySelectorAll('.proj-pill').forEach(pl=>pl.onclick = ()=>openProjModal(inst.id, pl.dataset.proj));
+    c.appendChild(block);
+  });
+}
+
+// Campos de endereço completos. prefix identifica o bloco (i_, r_, c_).
+function endFieldsHtml(prefix, e){
+  return `
+    <div class="addr-title">Endereço</div>
+    <div class="field-row r-1-2">
+      <div class="field"><label>CEP</label><input id="${prefix}cep" value="${escapeAttr(e.cep)}" placeholder="00000-000" inputmode="numeric" style="font-family:var(--font-mono);"></div>
+      <div class="field"><label>Logradouro</label><input id="${prefix}logradouro" value="${escapeAttr(e.logradouro)}" placeholder="Rua, avenida..."></div>
+    </div>
+    <div class="field-row r-1-2">
+      <div class="field"><label>Número</label><input id="${prefix}numero" value="${escapeAttr(e.numero)}"></div>
+      <div class="field"><label>Complemento</label><input id="${prefix}complemento" value="${escapeAttr(e.complemento)}" placeholder="Sala, bloco, apto..."></div>
+    </div>
+    <div class="field"><label>Bairro</label><input id="${prefix}bairro" value="${escapeAttr(e.bairro)}"></div>
+    <div class="field-row r-3-1">
+      <div class="field"><label>Cidade</label><input id="${prefix}cidade" value="${escapeAttr(e.cidade)}"></div>
+      <div class="field"><label>UF</label><select id="${prefix}uf"><option value="">—</option>${UFS.map(u=>`<option ${e.uf===u?'selected':''}>${u}</option>`).join('')}</select></div>
+    </div>`;
+}
+function readEnd(overlay, prefix){
+  const o = {};
+  END_KEYS.forEach(k=>{ o[k] = (overlay.querySelector('#'+prefix+k).value||'').trim(); });
+  o.cep = maskCEP(o.cep);
+  return o;
+}
+
+function openInstModal(instId){
+  const isNew = !instId;
+  const orig = isNew ? null : instById(instId);
+  const i = isNew
+    ? (()=>{ const n = {id:uid(), nome:'', cor: PALETTE[state.instituicoes.length % PALETTE.length], excluirIndicadores:false, projetos:[]}; normalizeInst(n, state.instituicoes.length); n.nome=''; return n; })()
+    : orig;
+  const r = i.rep, ct = i.contador;
+  let cor = i.cor;
+  const overlay = makeModal(isNew?'Nova instituição':'Editar instituição', `
+    <div class="form-cols">
+      <div class="form-col">
+        <h3>Dados da instituição</h3>
+        <div class="field"><label>Nome completo da instituição</label><input id="i_nome" value="${escapeAttr(i.nome)}"></div>
+        <div class="field"><label>Sigla</label><input id="i_sigla" value="${escapeAttr(i.sigla)}" placeholder="Ex.: ABIG" maxlength="20" style="text-transform:uppercase;font-family:var(--font-mono);">
+          <div class="hint" style="margin:4px 0 0;">É como a instituição aparece no Gestor (listas, filtros, cartões). Sem sigla, aparece o nome completo.</div></div>
+        <div class="field"><label>CNPJ</label><input id="i_cnpj" value="${escapeAttr(i.cnpj)}" placeholder="00.000.000/0000-00" inputmode="numeric" style="font-family:var(--font-mono);"></div>
+        <div class="field"><label>E-mail</label><input id="i_email" type="email" value="${escapeAttr(i.email)}"></div>
+        <div class="field-row">
+          <div class="field"><label>Telefone</label><input id="i_tel" value="${escapeAttr(i.telefone)}" placeholder="(41) 0000-0000" inputmode="tel"></div>
+          <div class="field"><label>Data de inscrição</label><input id="i_insc" type="date" value="${i.dataInscricao}"></div>
+        </div>
+        ${endFieldsHtml('ie_', i.end)}
+        <div class="field"><label>Cor de identificação</label>
+          <div class="swatches">${PALETTE.map(p=>`<button type="button" data-cor="${p}" style="background:${p}" class="${cor===p?'active':''}"></button>`).join('')}</div></div>
+        <div class="field"><label style="display:flex;align-items:center;gap:7px;text-transform:none;font-size:13px;color:var(--ink);">
+          <input type="checkbox" id="i_excl" ${i.excluirIndicadores?'checked':''} style="width:auto;"> Não contar nos indicadores de certidões</label></div>
+      </div>
+
+      <div class="form-col">
+        <h3>Representante legal</h3>
+        <div class="field"><label>Nome</label><input id="r_nome" value="${escapeAttr(r.nome)}"></div>
+        <div class="field"><label>CPF</label><input id="r_cpf" value="${escapeAttr(r.cpf)}" placeholder="000.000.000-00" inputmode="numeric" style="font-family:var(--font-mono);"></div>
+        <div class="field-row">
+          <div class="field"><label>RG</label><input id="r_rg" value="${escapeAttr(r.rg)}" placeholder="00.000.000-0" style="font-family:var(--font-mono);"></div>
+          <div class="field"><label>Profissão</label><input id="r_prof" value="${escapeAttr(r.profissao)}"></div>
+        </div>
+        ${endFieldsHtml('re_', r.end)}
+        <div class="field"><label>E-mail</label><input id="r_email" type="email" value="${escapeAttr(r.email)}"></div>
+        <div class="field"><label>Telefone</label><input id="r_tel" value="${escapeAttr(r.telefone)}" placeholder="(41) 00000-0000" inputmode="tel"></div>
+      </div>
+
+      <div class="form-col">
+        <h3>Contador</h3>
+        <div class="field"><label>Nome</label><input id="c_nome" value="${escapeAttr(ct.nome)}"></div>
+        <div class="field"><label>CPF</label><input id="c_cpf" value="${escapeAttr(ct.cpf)}" placeholder="000.000.000-00" inputmode="numeric" style="font-family:var(--font-mono);"></div>
+        <div class="field-row">
+          <div class="field"><label>RG</label><input id="c_rg" value="${escapeAttr(ct.rg)}" placeholder="00.000.000-0" style="font-family:var(--font-mono);"></div>
+          <div class="field"><label>Profissão</label><input id="c_prof" value="${escapeAttr(ct.profissao)}" placeholder="Contador(a)"></div>
+        </div>
+        <div class="field-row r-1-2">
+          <div class="field"><label>CRC (UF)</label><select id="c_crcuf"><option value="">—</option>${UFS.map(u=>`<option ${ct.crcUf===u?'selected':''}>${u}</option>`).join('')}</select></div>
+          <div class="field"><label>Número do CRC</label><input id="c_crcnum" value="${escapeAttr(ct.crcNumero)}" placeholder="Ex.: 012345/O-6" style="font-family:var(--font-mono);"></div>
+        </div>
+        <div class="field"><label>E-mail</label><input id="c_email" type="email" value="${escapeAttr(ct.email)}"></div>
+        <div class="field"><label>Telefone</label><input id="c_tel" value="${escapeAttr(ct.telefone)}" placeholder="(41) 00000-0000" inputmode="tel"></div>
+        ${endFieldsHtml('ce_', ct.end)}
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <div>${!isNew?`<button class="btn danger small" id="i_del">Excluir</button>`:''}</div>
+      <div style="display:flex;gap:8px;"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="i_save">${isNew?'Cadastrar':'Salvar'}</button></div>
+    </div>`, 1180);
+
+  // máscaras
+  const q = s=>overlay.querySelector(s);
+  bindMask(q('#i_cnpj'), maskCNPJ, maskCNPJ);
+  ['#r_cpf','#c_cpf'].forEach(s=>bindMask(q(s), maskCPF, maskCPF));
+  ['#r_rg','#c_rg'].forEach(s=>bindMask(q(s), maskRG));
+  ['#i_tel','#r_tel','#c_tel'].forEach(s=>bindMask(q(s), maskPhone, maskPhone));
+  ['#ie_cep','#re_cep','#ce_cep'].forEach(s=>bindMask(q(s), maskCEP, maskCEP));
+
+  overlay.querySelectorAll('.swatches button').forEach(b=>b.onclick = ()=>{
+    cor = b.dataset.cor; overlay.querySelectorAll('.swatches button').forEach(x=>x.classList.toggle('active', x===b));
+  });
+  if(!isNew){
+    q('#i_del').onclick = ()=>{
+      const nTar = state.tarefas.filter(t=>t.instituicaoId===i.id).length;
+      const nCert = state.certidoes.filter(x=>x.instituicaoId===i.id).length;
+      const nLink = state.links.filter(l=>l.instituicaoId===i.id).length;
+      if(!confirm(`Excluir "${i.nome}" e seus ${i.projetos.length} projeto(s)?\n\nTambém serão apagados: ${nCert} registro(s) de certidão e ${nLink} link(s). ${nTar} tarefa(s) ficarão sem instituição.\n\nEssa ação não pode ser desfeita.`)) return;
+      state.instituicoes = state.instituicoes.filter(x=>x.id!==i.id);
+      state.certidoes = state.certidoes.filter(x=>x.instituicaoId!==i.id);
+      state.links = state.links.filter(l=>l.instituicaoId!==i.id);
+      scheduleSave(); overlay.remove(); render(); toast('Instituição excluída.');
+    };
+  }
+  q('#i_save').onclick = ()=>{
+    const nome = q('#i_nome').value.trim();
+    if(!nome){ toast('Informe o nome da instituição.'); return; }
+    const emails = [['#i_email','instituição'],['#r_email','representante'],['#c_email','contador']];
+    for(const [sel, quem] of emails){
+      const v = q(sel).value.trim();
+      if(v && !/^\S+@\S+\.\S+$/.test(v)){ toast(`O e-mail do ${quem} parece inválido.`); q(sel).focus(); return; }
+    }
+    const cpfs = [['#r_cpf','representante'],['#c_cpf','contador']];
+    for(const [sel, quem] of cpfs){
+      const d = onlyDigits(q(sel).value);
+      if(d && d.length!==11){ toast(`O CPF do ${quem} precisa ter 11 dígitos.`); q(sel).focus(); return; }
+    }
+    const val = s=>q(s).value.trim();
+    const sigla = val('#i_sigla').toUpperCase().replace(/\s+/g,' ');
+    const dup = sigla && state.instituicoes.find(x=>x.id!==i.id && normalizeStr(x.sigla)===normalizeStr(sigla));
+    if(dup){ toast(`A sigla ${sigla} já é usada por ${dup.nome}.`); q('#i_sigla').focus(); return; }
+    Object.assign(i, {
+      nome, sigla, cor,
+      cnpj: maskCNPJ(val('#i_cnpj')) || val('#i_cnpj'),
+      email: val('#i_email'),
+      telefone: maskPhone(val('#i_tel')),
+      dataInscricao: q('#i_insc').value,
+      excluirIndicadores: q('#i_excl').checked,
+      end: readEnd(overlay, 'ie_')
+    });
+    i.endereco = formatEnd(i.end); // texto único, mantido para compatibilidade e consulta
+    i.rep = Object.assign(i.rep, {
+      nome: val('#r_nome'), cpf: maskCPF(val('#r_cpf')), rg: maskRG(val('#r_rg')), profissao: val('#r_prof'),
+      email: val('#r_email'), telefone: maskPhone(val('#r_tel')), end: readEnd(overlay, 're_')
+    });
+    i.contador = Object.assign(i.contador, {
+      nome: val('#c_nome'), cpf: maskCPF(val('#c_cpf')), rg: maskRG(val('#c_rg')), profissao: val('#c_prof'),
+      crcUf: q('#c_crcuf').value, crcNumero: val('#c_crcnum'),
+      email: val('#c_email'), telefone: maskPhone(val('#c_tel')), end: readEnd(overlay, 'ce_')
+    });
+    if(isNew) state.instituicoes.push(i);
+    scheduleSave(); overlay.remove(); render();
+    toast(isNew?'Instituição cadastrada.':'Instituição atualizada.');
+  };
+}
+
+/* ================== CERTIDÕES ================== */
+// ---- Regras de vencimento ----
+const REGRAS_NOTIF = [
+  ['dia',     'Notificar somente no dia do vencimento'],
+  ['diaSeguinte', 'Notificar 1 dia após o vencimento'],
+  ['4meses',  'Notificar com 4 meses de antecedência'],
+  ['nenhuma', 'Não gerar notificação de vencimento']
+];
+const CATEGORIAS_DOC = [['certidao','Certidão convencional'],['institucional','Documento institucional']];
+function categoriaPadrao(nome){ return /certid/.test(normalizeStr(nome)) ? 'certidao' : 'institucional'; }
+function regraLabel(id){ const r = REGRAS_NOTIF.find(x=>x[0]===id); return r ? r[1] : '—'; }
+// Início da janela de alerta (aaaa-mm-dd).
+// 4 meses: 1º dia do mês, 4 meses antes do vencimento (vence 30/09/2027 → alerta a partir de 01/05/2027).
+// Demais regras: 30 dias antes (mesma janela que o sistema já usava nos indicadores).
+function inicioAlerta(tipo, venc){
+  const d = new Date(String(venc).slice(0,10)+'T00:00:00');
+  if(isNaN(d)) return null;
+  if(tipo.regraNotif==='4meses'){ const i = new Date(d.getFullYear(), d.getMonth()-4, 1); return `${i.getFullYear()}-${pad2(i.getMonth()+1)}-01`; }
+  d.setDate(d.getDate()-30);
+  return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+}
+// Situação de um documento numa instituição: na | semdata | vencida | alerta | ok
+function certStatus(tipo, cert){
+  if(cert && cert.naoAplica) return {k:'na', label:'não se aplica', cls:'na'};
+  const du = cert ? daysUntil(cert.proximoVencimento) : null;
+  if(du===null) return {k:'semdata', label:'sem data', cls:'none'};
+  if(du===-1 && tipo.regraNotif==='diaSeguinte') return {k:'vencida', dias:du, label:'renovar hoje', cls:'bad'}; // só pode ser renovada no dia seguinte
+  if(du<0) return {k:'vencida', dias:du, label:`vencida há ${Math.abs(du)}d`, cls:'bad'};
+  const ini = inicioAlerta(tipo, cert.proximoVencimento);
+  if(ini && todayStr() >= ini) return {k:'alerta', dias:du, label: du===0 ? 'vence hoje' : `vence em ${du}d`, cls:'warn', desde:ini};
+  return {k:'ok', dias:du, label:'em dia', cls:'ok', desde:ini};
+}
+// Sites oficiais de emissão (mesmos já usados na Central de Links do gestor original).
+const SITES_CERTIDAO = [
+  [/divida ativa da uniao|receita federal|pgfn/, 'https://servicos.receitafederal.gov.br/servico/certidoes/#/home/cnpj'],
+  [/divida ativa estadual|estadual/,             'https://cdwfazenda.paas.pr.gov.br/cdwportal/certidao/automatica'],
+  [/fgts|crf/,                                   'https://consulta-crf.caixa.gov.br/consultacrf/pages/consultaEmpregador.jsf'],
+  [/trabalhista|cndt/,                           'https://cndt-certidao.tst.jus.br/inicio.faces'],
+  [/cepim/,                                      'https://certidoes.cgu.gov.br/'],
+  [/tce/,                                        'https://www.tce.pr.gov.br/para-o-fiscalizado/servicos/certidoes/certidao-liberatoria/']
+];
+// Certidão municipal: o site depende da cidade da instituição.
+const SITES_MUNICIPAIS = {
+  'curitiba': 'https://cnd-cidadao.curitiba.pr.gov.br/',
+  'colombo': 'https://colombo.atende.net/autoatendimento/servicos/certidao-negativa-de-debitos/detalhar/1',
+  'sao jose dos pinhais': 'https://financas.sjp.pr.gov.br/socioEconomicoGateway/#/certidao'
+};
+function siteConhecido(nomeTipo){
+  const n = normalizeStr(nomeTipo);
+  const hit = SITES_CERTIDAO.find(([re])=>re.test(n));
+  return hit ? hit[1] : '';
+}
+function isMunicipal(tipo){ return /municip/.test(normalizeStr(tipo.nome)); }
+// Qual site abrir para emitir: 1) o específico da instituição; 2) o da cidade (certidão municipal); 3) o padrão do tipo.
+function siteEmissao(inst, tipo, cert){
+  if(cert && cert.siteEmissao) return {url:cert.siteEmissao, origem:'específico desta instituição'};
+  if(isMunicipal(tipo) && inst && inst.end){
+    const u = SITES_MUNICIPAIS[normalizeStr(inst.end.cidade)];
+    if(u) return {url:u, origem:`prefeitura de ${inst.end.cidade}`};
+  }
+  if(tipo.siteEmissao) return {url:tipo.siteEmissao, origem:'padrão do tipo de certidão'};
+  return null;
+}
+function renderCertidoes(c){
+  const filterBar = document.createElement('div');
+  filterBar.className='filters';
+  filterBar.innerHTML = `
+    <select id="instFilterCert"><option value="">Todas instituições</option>
+      ${state.instituicoes.map(i=>`<option value="${i.id}" ${certInst===i.id?'selected':''}>${escapeHtml(instLabel(i))}</option>`).join('')}
+    </select>
+    <div class="spacer"></div>
+    <button class="btn ghost small" id="importCertBtn">⇪ Importar certidões</button>`;
+  c.appendChild(filterBar);
+  filterBar.querySelector('#instFilterCert').onchange = e=>{ certInst=e.target.value; render(); };
+  filterBar.querySelector('#importCertBtn').onclick = openImportCertModal;
+
+  const insts = state.instituicoes.filter(i=> !certInst || i.id===certInst);
+  if(insts.length===0){
+    c.innerHTML += `<div class="empty-state"><div class="big">Nenhuma instituição cadastrada</div><div>Cadastre as instituições na aba "Instituições".</div></div>`;
+    return;
+  }
+  if(state.certidaoTipos.length===0){
+    c.innerHTML += `<div class="empty-state"><div class="big">Nenhum tipo de certidão</div><div>Cadastre os tipos em Configurações.</div></div>`;
+    return;
+  }
+  insts.forEach(inst=>{
+    let ok=0,warn=0,bad=0,na=0;
+    state.certidaoTipos.forEach(tipo=>{
+      const cert = state.certidoes.find(x=>x.instituicaoId===inst.id && x.tipoId===tipo.id);
+      const k = certStatus(tipo, cert).k;
+      if(k==='na') na++; else if(k==='vencida' || k==='semdata') bad++; else if(k==='alerta') warn++; else ok++;
+    });
+    const block = document.createElement('div');
+    block.className='inst-block';
+    block.innerHTML = `
+      <div class="inst-head">
+        <span class="inst-swatch" style="background:${inst.cor}"></span>
+        <h3 title="${escapeAttr(inst.nome)}">${escapeHtml(instLabel(inst))}</h3>
+        ${inst.cnpj?`<button class="icon-btn cpCnpj mono small" title="Copiar CNPJ">📋 ${escapeHtml(inst.cnpj)}</button>`:''}
+        <div class="stats">
+          ${ok?`<span style="color:var(--ok)">${ok} em dia</span>`:''}
+          ${warn?`<span style="color:var(--warn)">${warn} vencendo</span>`:''}
+          ${bad?`<span style="color:var(--bad)">${bad} vencidas/sem data</span>`:''}
+          ${na?`<span style="color:var(--muted)">${na} não se aplica${na>1?'m':''}</span>`:''}
+        </div>
+      </div>`;
+    const cp = block.querySelector('.cpCnpj');
+    if(cp) cp.onclick = ()=>copyText(inst.cnpj, `CNPJ de ${instLabel(inst)} copiado!`);
+    const grid = document.createElement('div');
+    grid.className='cert-grid';
+    state.certidaoTipos.forEach(tipo=>{
+      const cert = state.certidoes.find(x=>x.instituicaoId===inst.id && x.tipoId===tipo.id);
+      const st = certStatus(tipo, cert);
+      const bc = st.cls, bt = st.label;
+      const site = st.k==='na' ? null : siteEmissao(inst, tipo, cert);
+      const cell = document.createElement('div');
+      cell.className='cert-cell' + (st.k==='na' ? ' na' : '');
+      cell.innerHTML = `
+        <div class="cn">${escapeHtml(tipo.nome)}</div>
+        ${tipo.regraNotif==='4meses' ? '<div class="regra-tag">⏰ aviso 4 meses antes</div>' : tipo.regraNotif==='diaSeguinte' ? '<div class="regra-tag">⏭ aviso 1 dia após o vencimento</div>' : tipo.regraNotif==='nenhuma' ? '<div class="regra-tag">🔕 sem aviso</div>' : ''}
+        <div class="cd"><span>Últ. renovação</span><span>${cert?fmtDate(cert.ultimaRenovacao):'—'}</span></div>
+        <div class="cd"><span>Próx. vencimento</span><span>${cert?fmtDate(cert.proximoVencimento):'—'}</span></div>
+        <div class="foot"><span class="badge ${bc}">${bt}</span>
+          <span style="display:flex;gap:4px;">
+          ${site ? `<a class="file-link" href="${escapeAttr(site.url)}" target="_blank" rel="noopener noreferrer" title="Abrir o site de emissão (${escapeAttr(site.origem)})">🌐 emitir</a>` : ''}
+          ${cert && cert.link ? `<a class="file-link" href="${escapeAttr(cert.link)}" target="_blank" rel="noopener noreferrer" title="Abrir o arquivo da certidão">📄 abrir</a>` : ''}
+          </span></div>`;
+      cell.querySelectorAll('a').forEach(a=>a.onclick = e=>e.stopPropagation());
+      cell.onclick = ()=>openCertModal(inst.id, tipo.id);
+      grid.appendChild(cell);
+    });
+    block.appendChild(grid);
+    c.appendChild(block);
+  });
+}
+
+function openNovoTipoDocModal(){
+  const overlay = makeModal('Novo tipo de certidão / documento', `
+    <div class="field"><label>Nome</label><input id="nt_nome" placeholder="Ex.: Certidão de Regularidade ou Registro no CMDCA"></div>
+    <div class="field"><label>Categoria</label><select id="nt_cat">${CATEGORIAS_DOC.map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select></div>
+    <div class="field"><label>Regra de notificação de vencimento</label><select id="nt_regra"><option value="">— Selecione —</option>${REGRAS_NOTIF.map(([v,l])=>`<option value="${v}">${l}</option>`).join('')}</select></div>
+    <div class="field"><label>Site de emissão — opcional</label><input id="nt_site" placeholder="https://..."></div>
+    <div class="modal-actions" style="justify-content:flex-end;"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="nt_save">Adicionar</button></div>`, 440);
+  const q = s=>overlay.querySelector(s);
+  q('#nt_nome').focus();
+  q('#nt_nome').oninput = e=>{ // sugere categoria e regra pelo nome; a pessoa pode trocar
+    const cat = categoriaPadrao(e.target.value);
+    q('#nt_cat').value = cat;
+    if(!q('#nt_regra').dataset.touched) q('#nt_regra').value = cat==='certidao' ? 'dia' : '4meses';
+  };
+  q('#nt_regra').onchange = e=>{ e.target.dataset.touched = '1'; };
+  q('#nt_save').onclick = ()=>{
+    const nome = q('#nt_nome').value.trim().replace(/\s+/g,' ');
+    const regra = q('#nt_regra').value, site = q('#nt_site').value.trim();
+    if(!nome){ toast('Informe o nome.'); return; }
+    if(!regra){ toast('Selecione a regra de notificação.'); return; }
+    if(state.certidaoTipos.some(t=>normalizeStr(t.nome)===normalizeStr(nome))){ toast('Já existe um tipo com esse nome.'); return; }
+    if(site && !isUrl(site)){ toast('O site precisa começar com http:// ou https://'); return; }
+    state.certidaoTipos.push({id:uid(), nome, notificarApenasNoDia:false, siteEmissao: site || siteConhecido(nome), categoria: q('#nt_cat').value, regraNotif: regra});
+    scheduleSave(); overlay.remove(); render(); toast('Tipo adicionado.');
+  };
+}
+
+function openCertModal(instId, tipoId){
+  let cert = state.certidoes.find(x=>x.instituicaoId===instId && x.tipoId===tipoId);
+  const isNew = !cert;
+  if(isNew) cert = {id:uid(), instituicaoId:instId, tipoId, ultimaRenovacao:'', proximoVencimento:'', link:'', siteEmissao:''};
+  const inst = instById(instId);
+  const tipo = state.certidaoTipos.find(t=>t.id===tipoId);
+  if(!inst || !tipo) return;
+  const site = siteEmissao(inst, tipo, cert);
+  const padrao = siteEmissao(inst, tipo, null); // o que vale se não houver site específico
+  const st0 = certStatus(tipo, cert);
+  const status = `<span class="badge ${st0.cls}">${st0.label}</span>`;
+  const respId = tipo.categoria==='institucional' ? state.notifInstitucionalMembroId : state.notifCertidaoMembroId;
+  const resp = respId ? membroById(respId) : null;
+  const iniTxt = cert.proximoVencimento && tipo.regraNotif==='4meses' ? ` — alerta a partir de ${fmtDate(inicioAlerta(tipo, cert.proximoVencimento))}` : '';
+
+  const overlay = makeModal(escapeHtml(tipo.nome), `
+    <div class="hint" style="margin:-8px 0 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+      <span>${escapeHtml(inst.nome)}${inst.sigla?` (${escapeHtml(inst.sigla)})`:''}</span>
+      ${inst.cnpj?`<button type="button" class="icon-btn mono small" id="c_cnpj" title="Copiar CNPJ">📋 ${escapeHtml(inst.cnpj)}</button>`:''}
+      ${status}
+    </div>
+    <div class="hint" style="margin:-6px 0 0;">
+      ${tipo.categoria==='institucional'?'🏛 Documento institucional':'📄 Certidão convencional'} · ${escapeHtml(regraLabel(tipo.regraNotif))}${iniTxt}
+      ${tipo.regraNotif!=='nenhuma' ? ` · aviso para: <b>${resp?escapeHtml(resp.nome):'ninguém definido (Configurações)'}</b>` : ''}
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;padding:8px 10px;border:1px dashed var(--line);border-radius:8px;background:var(--white);cursor:pointer;">
+      <input type="checkbox" id="c_na" ${cert.naoAplica?'checked':''} style="width:auto;">
+      <span><b>Não se aplica a esta instituição</b><br><span class="muted small">Não gera aviso, não conta como vencido nem pendente e fica fora dos indicadores. As datas registradas são mantidas.</span></span>
+    </label>
+
+    <div class="modal-sub">1. Emitir</div>
+    ${site
+      ? `<a class="btn" id="c_emitir" href="${escapeAttr(site.url)}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;justify-content:center;">🌐 Abrir site de emissão</a>
+         <div class="hint" style="margin:-6px 0 0;word-break:break-all;">${escapeHtml(site.url)} <span class="muted">— ${escapeHtml(site.origem)}</span></div>`
+      : `<div class="note" style="margin:0;">Nenhum site de emissão cadastrado para esta certidão. Cadastre o padrão em <b>Configurações → Tipos de certidão</b> ou um específico abaixo.</div>`}
+    <details ${cert.siteEmissao?'open':''} style="font-size:13px;">
+      <summary style="cursor:pointer;color:var(--muted);">Usar um site diferente para esta instituição</summary>
+      <div class="field" style="margin-top:8px;">
+        <input id="c_site" value="${escapeAttr(cert.siteEmissao||'')}" placeholder="https://... (deixe vazio para usar o padrão)">
+        <div class="hint" style="margin:4px 0 0;">Padrão: ${padrao?escapeHtml(padrao.url):'nenhum'}</div>
+      </div>
+    </details>
+
+    <div class="modal-sub">2. Registrar a certidão</div>
+    <div class="field-row">
+      <div class="field"><label>Última renovação</label>
+        <div style="display:flex;gap:6px;"><input id="c_ult" type="date" value="${cert.ultimaRenovacao||''}" style="flex:1;min-width:0;">
+        <button type="button" class="btn ghost small" id="c_hoje" style="flex:none;" title="Preencher com a data de hoje">Hoje</button></div></div>
+      <div class="field"><label>Próximo vencimento</label><input id="c_prox" type="date" value="${cert.proximoVencimento||''}"></div>
+    </div>
+    <div class="field"><label>Link do arquivo da certidão</label>
+      <div style="display:flex;gap:6px;">
+        <input id="c_link" value="${escapeAttr(cert.link||'')}" placeholder="https://... (link do PDF no Drive / SharePoint)" style="flex:1;min-width:0;">
+        ${cert.link?`<a class="btn ghost small" href="${escapeAttr(cert.link)}" target="_blank" rel="noopener noreferrer" style="flex:none;text-decoration:none;">📄 Abrir</a>`:''}
+      </div>
+      <div class="hint" style="margin:4px 0 0;">Cole o link de compartilhamento do arquivo. Assim ele abre direto daqui, sem procurar nas pastas.</div>
+    </div>
+    <div class="modal-actions">
+      <div>${!isNew?`<button class="btn danger small" id="c_del">Limpar registro</button>`:''}</div>
+      <div style="display:flex;gap:8px;"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="c_save">Salvar</button></div>
+    </div>`, 520);
+  const q = s=>overlay.querySelector(s);
+  if(q('#c_cnpj')) q('#c_cnpj').onclick = ()=>copyText(inst.cnpj, 'CNPJ copiado!');
+  q('#c_hoje').onclick = ()=>{ q('#c_ult').value = todayStr(); };
+  if(!isNew){
+    q('#c_del').onclick = ()=>{
+      if(!confirm('Apagar as datas e o link desta certidão?')) return;
+      state.certidoes = state.certidoes.filter(x=>x.id!==cert.id);
+      scheduleSave(); overlay.remove(); render(); toast('Registro removido.');
+    };
+  }
+  q('#c_save').onclick = ()=>{
+    const link = q('#c_link').value.trim();
+    const siteEsp = q('#c_site').value.trim();
+    if(link && !isUrl(link)){ toast('O link do arquivo precisa começar com http:// ou https://'); return; }
+    if(siteEsp && !isUrl(siteEsp)){ toast('O site de emissão precisa começar com http:// ou https://'); return; }
+    const ult = q('#c_ult').value, prox = q('#c_prox').value;
+    if(ult && prox && prox < ult){ toast('O vencimento está antes da renovação.'); return; }
+    cert.ultimaRenovacao = ult;
+    cert.proximoVencimento = prox;
+    cert.link = link;
+    cert.siteEmissao = siteEsp;
+    cert.naoAplica = q('#c_na').checked;
+    if(isNew) state.certidoes.push(cert);
+    scheduleSave(); overlay.remove(); render(); toast('Certidão atualizada.');
+  };
+}
+
+function parseDateFlexible(str){
+  str = String(str||'').trim();
+  if(!str) return null;
+  let m = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if(m) return `${m[1]}-${pad2(m[2])}-${pad2(m[3])}`;
+  m = str.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+  if(m) return `${m[3]}-${pad2(m[2])}-${pad2(m[1])}`;
+  m = str.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2})$/);
+  if(m) return `20${m[3]}-${pad2(m[2])}-${pad2(m[1])}`;
+  return null;
+}
+
+function parseImportCertidoes(raw){
+  const lines = raw.split('\n').map(l=>l.replace(/\r$/,'')).filter(l=>l.trim()!=='');
+  const rows = [];
+  lines.forEach((line, idx)=>{
+    const sep = line.includes('\t') ? '\t' : line.includes(';') ? ';' : ',';
+    const cols = line.split(sep).map(c=>c.trim());
+    if(cols.length<2) return;
+    const [instRaw, tipoRaw, ultimaRaw, proxRaw, linkRaw] = cols;
+    const ultima = parseDateFlexible(ultimaRaw), proxima = parseDateFlexible(proxRaw);
+    if(idx===0 && !ultima && !proxima && (normalizeStr(instRaw).includes('instituic') || normalizeStr(tipoRaw).includes('certid'))) return;
+    const inst = state.instituicoes.find(i=>normalizeStr(i.nome)===normalizeStr(instRaw) || (i.sigla && normalizeStr(i.sigla)===normalizeStr(instRaw)));
+    const tipo = state.certidaoTipos.find(t=>normalizeStr(t.nome)===normalizeStr(tipoRaw));
+    let status='ok', error='';
+    if(!inst){ status='erro'; error='instituição não encontrada'; }
+    else if(!tipo){ status='erro'; error='certidão não encontrada'; }
+    else if(ultimaRaw && !ultima){ status='erro'; error='data de renovação inválida'; }
+    else if(proxRaw && !proxima){ status='erro'; error='data de vencimento inválida'; }
+    else if(linkRaw && !isUrl(linkRaw)){ status='erro'; error='link inválido'; }
+    rows.push({instRaw:instRaw||'', tipoRaw:tipoRaw||'', instId:inst?inst.id:null, tipoId:tipo?tipo.id:null,
+      ultimaRenovacao:ultima||'', proximoVencimento:proxima||'', link:linkRaw||'', status, error});
+  });
+  return rows;
+}
+
+function openImportCertModal(){
+  const overlay = makeModal('Importar certidões', `
+    <div class="hint" style="margin:-8px 0 0;">Copie do Excel/Google Sheets as colunas <b>Instituição, Certidão, Última renovação, Próximo vencimento</b> e, se quiser, <b>Link do arquivo</b> (datas em dd/mm/aaaa) e cole abaixo. Os nomes precisam bater com o que está cadastrado. Uma linha de cabeçalho é ignorada.</div>
+    <div class="field"><textarea id="imp_text" style="min-height:150px;font-family:var(--font-mono);font-size:12.5px;" placeholder="Instituição A	Certidão FGTS	10/01/2026	10/07/2026	https://..."></textarea></div>
+    <div id="imp_preview"></div>
+    <div class="modal-actions"><div></div><div style="display:flex;gap:8px;">
+      <button class="btn ghost" data-close>Cancelar</button><button class="btn ghost" id="imp_analyze">Analisar</button>
+      <button class="btn" id="imp_confirm" style="display:none;">Importar</button></div></div>`, 680);
+  let parsed = [];
+  overlay.querySelector('#imp_analyze').onclick = ()=>{
+    parsed = parseImportCertidoes(overlay.querySelector('#imp_text').value);
+    const box = overlay.querySelector('#imp_preview');
+    const okCount = parsed.filter(r=>r.status==='ok').length;
+    if(!parsed.length){ box.innerHTML = `<div class="hint">Nenhuma linha reconhecida.</div>`; overlay.querySelector('#imp_confirm').style.display='none'; return; }
+    box.innerHTML = `<div class="hint">${okCount} de ${parsed.length} linha(s) prontas para importar.</div>
+      <div class="tbl-wrap" style="max-height:220px;overflow-y:auto;"><table class="tbl" style="font-size:12px;">
+        <thead><tr><th>Instituição</th><th>Certidão</th><th>Renovação</th><th>Vencimento</th><th>Link</th><th>Status</th></tr></thead>
+        <tbody>${parsed.map(r=>`<tr><td>${escapeHtml(r.instRaw)}</td><td>${escapeHtml(r.tipoRaw)}</td>
+          <td>${r.ultimaRenovacao?fmtDate(r.ultimaRenovacao):'—'}</td><td>${r.proximoVencimento?fmtDate(r.proximoVencimento):'—'}</td>
+          <td>${r.link?'✓':'—'}</td>
+          <td>${r.status==='ok'?'<span class="badge ok">ok</span>':`<span class="badge bad">${escapeHtml(r.error)}</span>`}</td></tr>`).join('')}</tbody>
+      </table></div>`;
+    overlay.querySelector('#imp_confirm').style.display = okCount ? 'inline-flex' : 'none';
+  };
+  overlay.querySelector('#imp_confirm').onclick = ()=>{
+    let count=0;
+    parsed.filter(r=>r.status==='ok').forEach(r=>{
+      let cert = state.certidoes.find(x=>x.instituicaoId===r.instId && x.tipoId===r.tipoId);
+      if(!cert){ cert = {id:uid(), instituicaoId:r.instId, tipoId:r.tipoId, ultimaRenovacao:'', proximoVencimento:'', link:''}; state.certidoes.push(cert); }
+      if(r.ultimaRenovacao) cert.ultimaRenovacao = r.ultimaRenovacao;
+      if(r.proximoVencimento) cert.proximoVencimento = r.proximoVencimento;
+      if(r.link) cert.link = r.link;
+      count++;
+    });
+    scheduleSave(); overlay.remove(); render(); toast(`${count} certidão(ões) importada(s).`);
+  };
+}
+
+/* ================== CENTRAL DE LINKS ================== */
+function linkIcon(cat){
+  const c = normalizeStr(cat);
+  if(c.includes('senha') || c.includes('acesso')) return '🔑';
+  if(c.includes('pasta') || c.includes('drive') || c.includes('sharepoint')) return '📁';
+  if(c.includes('planilha')) return '📊';
+  if(c.includes('certid')) return '📄';
+  return '🔗';
+}
+
+function renderLinks(c){
+  const f = linkFilters;
+  const cats = [...new Set([...LINK_CATS, ...state.links.map(l=>l.categoria).filter(Boolean)])];
+  const filterBar = document.createElement('div');
+  filterBar.className='filters';
+  filterBar.innerHTML = `
+    <input type="text" id="lBusca" placeholder="🔎 Buscar link..." value="${escapeAttr(f.busca)}">
+    <select id="lInst"><option value="">Todas instituições</option><option value="__geral" ${f.inst==='__geral'?'selected':''}>Links gerais</option>
+      ${state.instituicoes.map(i=>`<option value="${i.id}" ${f.inst===i.id?'selected':''}>${escapeHtml(instLabel(i))}</option>`).join('')}</select>
+    <select id="lCat"><option value="">Todas categorias</option>${cats.map(x=>`<option ${f.cat===x?'selected':''}>${escapeHtml(x)}</option>`).join('')}</select>
+    <div class="spacer"></div>
+    ${(f.inst||f.cat||f.busca)?`<button class="chip-clear" id="lClear">limpar filtros</button>`:''}`;
+  c.appendChild(filterBar);
+  const lb = filterBar.querySelector('#lBusca');
+  lb.oninput = e=>{ f.busca = e.target.value; const pos = e.target.selectionStart; render(); requestAnimationFrame(()=>{ const n=document.getElementById('lBusca'); if(n){ n.focus(); n.setSelectionRange(pos,pos);} }); };
+  filterBar.querySelector('#lInst').onchange = e=>{ f.inst = e.target.value; render(); };
+  filterBar.querySelector('#lCat').onchange = e=>{ f.cat = e.target.value; render(); };
+  const lc = filterBar.querySelector('#lClear');
+  if(lc) lc.onclick = ()=>{ linkFilters = {inst:'', cat:'', busca:''}; render(); };
+
+  const note = document.createElement('div');
+  note.className = 'note';
+  note.innerHTML = '🔑 <b>Acessos e senhas:</b> use a categoria "Acesso / Senha" para guardar o endereço do sistema, o usuário e a senha. A senha aparece escondida (••••) — clique em 👁 para ver e em 📋 para copiar.';
+  c.appendChild(note);
+
+  const filtering = !!(f.inst||f.cat||f.busca);
+  const match = l=>{
+    if(f.cat && l.categoria!==f.cat) return false;
+    if(f.busca){ const q = normalizeStr(f.busca); if(![l.titulo,l.url,l.usuario,l.obs,l.categoria].some(v=>normalizeStr(v).includes(q))) return false; }
+    return true;
+  };
+  function linkGrid(links){
+    const grid = document.createElement('div');
+    grid.className='cert-grid';
+    grid.style.cssText = 'background:transparent;gap:9px;';
+    links.forEach(l=>{
+      const cell = document.createElement('div');
+      cell.className='cert-cell';
+      cell.style.cssText = 'border:1px solid var(--line-soft);border-radius:8px;';
+      cell.innerHTML = `
+        <div class="cn">${linkIcon(l.categoria)} ${escapeHtml(l.titulo)}</div>
+        ${l.categoria?`<span class="tag" style="display:inline-block;margin-bottom:6px;">${escapeHtml(l.categoria)}</span>`:''}
+        ${l.url?`<div class="cd" style="margin-top:2px;"><a href="${escapeAttr(l.url)}" target="_blank" rel="noopener" class="lk" style="color:var(--teal);text-decoration:underline;word-break:break-all;">${escapeHtml(l.url)}</a></div>`:''}
+        ${l.usuario?`<div class="cd" style="margin-top:6px;align-items:center;"><span style="word-break:break-all;">Usuário: <b style="color:var(--ink);">${escapeHtml(l.usuario)}</b></span><button class="icon-btn cpU" title="Copiar usuário">📋</button></div>`:''}
+        ${l.senha?`<div class="cd" style="margin-top:4px;align-items:center;"><span style="word-break:break-all;">Senha: <b class="pwVal" style="color:var(--ink);">••••••••</b></span><span style="display:flex;flex:none;"><button class="icon-btn pwShow" title="Mostrar/ocultar senha">👁</button><button class="icon-btn cpS" title="Copiar senha">📋</button></span></div>`:''}
+        ${l.obs?`<div class="cd" style="margin-top:6px;white-space:pre-wrap;font-family:var(--font-body);">${escapeHtml(l.obs)}</div>`:''}`;
+      const a = cell.querySelector('.lk'); if(a) a.onclick = e=>e.stopPropagation();
+      const cu = cell.querySelector('.cpU'); if(cu) cu.onclick = e=>{ e.stopPropagation(); copyText(l.usuario, 'Usuário copiado!'); };
+      const cs = cell.querySelector('.cpS'); if(cs) cs.onclick = e=>{ e.stopPropagation(); copyText(l.senha, 'Senha copiada!'); };
+      const ps = cell.querySelector('.pwShow');
+      if(ps) ps.onclick = e=>{
+        e.stopPropagation();
+        const v = cell.querySelector('.pwVal'), vis = v.dataset.vis==='1';
+        v.textContent = vis ? '••••••••' : l.senha; v.dataset.vis = vis ? '' : '1';
+      };
+      cell.onclick = ()=>openLinkModal(l.id);
+      grid.appendChild(cell);
+    });
+    return grid;
+  }
+  function section(title, links, container){
+    const w = document.createElement('div');
+    w.style.cssText = 'padding:12px 0;border-top:1px solid var(--line-soft);';
+    w.innerHTML = `<div style="font-family:var(--font-mono);font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px;">${escapeHtml(title)}</div>`;
+    if(links.length) w.appendChild(linkGrid(links));
+    else w.innerHTML += `<div class="small muted">Nenhum link cadastrado.</div>`;
+    container.appendChild(w);
+  }
+  let shown = 0;
+  function block(title, cor, groups){
+    const visible = groups.filter(g=>g.links.length || !filtering);
+    if(!visible.length) return;
+    const b = document.createElement('div');
+    b.className = 'inst-block';
+    b.innerHTML = `<div class="inst-head">${cor?`<span class="inst-swatch" style="background:${cor}"></span>`:'<span>🌐</span>'}<h3>${escapeHtml(title)}</h3></div>`;
+    const body = document.createElement('div');
+    body.style.padding = '4px 16px 14px';
+    visible.forEach(g=>{ shown += g.links.length; section(g.title, g.links, body); });
+    b.appendChild(body);
+    c.appendChild(b);
+  }
+
+  const gerais = state.links.filter(l=>!l.instituicaoId && match(l));
+  if((!f.inst || f.inst==='__geral') && (gerais.length || f.inst==='__geral')) block('Links gerais', null, [{title:'Todas as instituições', links:gerais}]);
+  if(f.inst!=='__geral'){
+    state.instituicoes.filter(i=>!f.inst || i.id===f.inst).forEach(inst=>{
+      const own = state.links.filter(l=>l.instituicaoId===inst.id && match(l));
+      const groups = [{title:'Geral da instituição', links: own.filter(l=>!l.projetoId || !projById(inst.id, l.projetoId))}];
+      inst.projetos.forEach(p=>groups.push({title: projLabel(p), links: own.filter(l=>l.projetoId===p.id)}));
+      block(instLabel(inst), inst.cor, groups);
+    });
+  }
+  if(state.links.length===0){
+    const e = document.createElement('div');
+    e.className='empty-state';
+    e.innerHTML = `<div class="big">Nenhum link cadastrado ainda</div><div>Use "+ Novo link" para guardar pastas, SharePoints, sistemas e acessos de cada instituição ou projeto.</div>`;
+    c.appendChild(e);
+  } else if(filtering && shown===0){
+    c.innerHTML += `<div class="empty-state"><div>Nenhum link com esses filtros.</div></div>`;
+  }
+}
+
+function openLinkModal(linkId){
+  const isNew = !linkId;
+  const orig = isNew ? null : state.links.find(x=>x.id===linkId);
+  if(!isNew && !orig) return;
+  const l = isNew
+    ? {id:uid(), titulo:'', url:'', categoria:'', usuario:'', obs:'',
+       instituicaoId: (linkFilters.inst && linkFilters.inst!=='__geral') ? linkFilters.inst : '', projetoId:''}
+    : orig;
+  const overlay = makeModal(isNew?'Novo link':'Editar link', `
+    <div class="field"><label>Título</label><input id="l_titulo" placeholder="Ex.: SharePoint da instituição, Portal do TCE-PR" value="${escapeAttr(l.titulo)}"></div>
+    <div class="field"><label>Endereço (URL) — opcional</label><input id="l_url" placeholder="https://..." value="${escapeAttr(l.url)}"></div>
+    <div class="field-row">
+      <div class="field"><label>Instituição</label>
+        <select id="l_inst"><option value="">— Geral (todas) —</option>${state.instituicoes.map(i=>`<option value="${i.id}" ${l.instituicaoId===i.id?'selected':''}>${escapeHtml(instLabel(i))}</option>`).join('')}</select></div>
+      <div class="field"><label>Projeto</label><select id="l_proj"></select></div>
+    </div>
+    <div class="field"><label>Categoria</label>
+      <input id="l_cat" list="l_cats" placeholder="Escolha ou digite" value="${escapeAttr(l.categoria)}">
+      <datalist id="l_cats">${LINK_CATS.map(x=>`<option value="${escapeAttr(x)}">`).join('')}</datalist></div>
+    <div class="field-row">
+      <div class="field"><label>Usuário / login — opcional</label><input id="l_user" value="${escapeAttr(l.usuario)}" autocomplete="off"></div>
+      <div class="field"><label>Senha — opcional</label>
+        <div style="display:flex;gap:6px;">
+          <input id="l_senha" type="password" value="${escapeAttr(l.senha)}" autocomplete="new-password" style="flex:1;min-width:0;">
+          <button type="button" class="btn ghost small" id="l_senha_show" title="Mostrar/ocultar senha" style="flex:none;padding:0 10px;">👁</button>
+        </div></div>
+    </div>
+    <div class="field"><label>Observação — opcional</label><textarea id="l_obs" placeholder="Alguma nota sobre esse link...">${escapeHtml(l.obs)}</textarea></div>
+    <div class="modal-actions">
+      <div>${!isNew?`<button class="btn danger small" id="l_del">Excluir</button>`:''}</div>
+      <div style="display:flex;gap:8px;"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="l_save">${isNew?'Adicionar link':'Salvar'}</button></div>
+    </div>`, 520);
+  const senhaInp = overlay.querySelector('#l_senha');
+  overlay.querySelector('#l_senha_show').onclick = ()=>{ senhaInp.type = senhaInp.type==='password' ? 'text' : 'password'; };
+  const instSel = overlay.querySelector('#l_inst'), projSel = overlay.querySelector('#l_proj');
+  const refresh = sel=>{
+    const inst = instById(instSel.value);
+    projSel.innerHTML = projOptionsHtml(inst, sel, inst ? '— Geral da instituição —' : '—');
+    projSel.disabled = !inst;
+  };
+  refresh(l.projetoId);
+  instSel.onchange = ()=>refresh('');
+  if(!isNew){
+    overlay.querySelector('#l_del').onclick = ()=>{
+      if(!confirm('Excluir este link?')) return;
+      state.links = state.links.filter(x=>x.id!==l.id);
+      scheduleSave(); overlay.remove(); render(); toast('Link excluído.');
+    };
+  }
+  overlay.querySelector('#l_save').onclick = ()=>{
+    const titulo = overlay.querySelector('#l_titulo').value.trim();
+    const url = overlay.querySelector('#l_url').value.trim();
+    if(!titulo){ toast('Informe o título.'); return; }
+    if(url && !isUrl(url)){ toast('A URL precisa começar com http:// ou https://'); return; }
+    Object.assign(l, {
+      titulo, url, instituicaoId: instSel.value, projetoId: instSel.value ? projSel.value : '',
+      categoria: overlay.querySelector('#l_cat').value.trim(),
+      usuario: overlay.querySelector('#l_user').value.trim(),
+      senha: overlay.querySelector('#l_senha').value,
+      obs: overlay.querySelector('#l_obs').value
+    });
+    if(isNew) state.links.push(l);
+    scheduleSave(); overlay.remove(); render();
+    toast(isNew?'Link adicionado.':'Link atualizado.');
+  };
+}
+
+/* ================== CONFIGURAÇÕES ================== */
+function renderConfig(c){
+  const wrap = document.createElement('div');
+
+  // Lista simples editável (strings), com arrastar para reordenar
+  function stringListSection(title, hint, arr, addLabel, newValue){
+    const s = document.createElement('div'); s.className='cfg-section';
+    s.innerHTML = `<h3>${title}</h3><div class="hint">${hint}</div>`;
+    const list = document.createElement('div'); list.className='cfg-list';
+    arr.forEach((val, idx)=>{
+      const row = document.createElement('div'); row.className='cfg-row'; row.draggable = true;
+      row.innerHTML = `<span title="Arraste para reordenar" style="cursor:grab;color:var(--muted);padding:0 2px;user-select:none;">⠿</span>
+        <input value="${escapeAttr(val)}"><button class="icon-btn del" title="Remover">✕</button>`;
+      row.querySelector('input').oninput = e=>{ arr[idx] = e.target.value; scheduleSave(); };
+      row.querySelector('button').onclick = ()=>{ if(!confirm(`Remover "${val}"?`)) return; arr.splice(idx,1); scheduleSave(); render(); };
+      row.addEventListener('dragstart', e=>{ e.dataTransfer.setData('text/plain', String(idx)); row.style.opacity='.5'; });
+      row.addEventListener('dragend', ()=>{ row.style.opacity='1'; });
+      row.addEventListener('dragover', e=>{ e.preventDefault(); row.style.background='var(--paper-dim)'; });
+      row.addEventListener('dragleave', ()=>{ row.style.background=''; });
+      row.addEventListener('drop', e=>{
+        e.preventDefault(); row.style.background='';
+        const from = parseInt(e.dataTransfer.getData('text/plain'));
+        if(isNaN(from) || from===idx) return;
+        arr.splice(idx, 0, arr.splice(from,1)[0]);
+        scheduleSave(); render();
+      });
+      list.appendChild(row);
+    });
+    s.appendChild(list);
+    const add = document.createElement('button');
+    add.className='btn ghost small'; add.style.marginTop='10px'; add.textContent = addLabel;
+    add.onclick = ()=>{ arr.push(newValue); scheduleSave(); render(); };
+    s.appendChild(add);
+    return s;
+  }
+
+  // Tipos de certidão
+  const s1 = document.createElement('div'); s1.className='cfg-section';
+  s1.innerHTML = `<h3>Tipos de certidão e documentos</h3><div class="hint">A lista de certidões acompanhadas em todas as instituições. Os tipos ficam só aqui — não aparecem como projetos. <b>Site de emissão</b>: o endereço que abre no botão "🌐 emitir" (cada instituição pode ter um site próprio, definido na própria certidão; a municipal usa a cidade da instituição quando é Curitiba, Colombo ou São José dos Pinhais). <br><b>Categoria</b> define quem recebe o aviso (veja "Responsáveis pelos avisos" abaixo). <b>Regra de notificação</b>: no dia do vencimento, 1 dia após o vencimento (para certidões que só podem ser renovadas no dia seguinte), 4 meses antes (o alerta começa no 1º dia do mês, 4 meses antes do vencimento) ou sem aviso.</div>`;
+  const l1 = document.createElement('div'); l1.className='cfg-list';
+  state.certidaoTipos.forEach(tipo=>{
+    const row = document.createElement('div'); row.className='cfg-row';
+    row.style.flexWrap = 'wrap';
+    row.innerHTML = `<input value="${escapeAttr(tipo.nome)}" class="tNome" style="flex:1 1 200px;">
+      <input value="${escapeAttr(tipo.siteEmissao||'')}" class="tSite" placeholder="🌐 Site de emissão (https://...)" style="flex:2 1 260px;font-size:12.5px;color:var(--teal);">
+      <select class="tCat" title="Categoria" style="flex:1 1 170px;padding:6px 8px;border:1px solid var(--line-soft);border-radius:6px;background:var(--white);font-size:12.5px;">${CATEGORIAS_DOC.map(([v,l])=>`<option value="${v}" ${tipo.categoria===v?'selected':''}>${l}</option>`).join('')}</select>
+      <select class="tRegra" title="Regra de notificação de vencimento" style="flex:1 1 230px;padding:6px 8px;border:1px solid var(--line-soft);border-radius:6px;background:var(--white);font-size:12.5px;">${REGRAS_NOTIF.map(([v,l])=>`<option value="${v}" ${tipo.regraNotif===v?'selected':''}>${l}</option>`).join('')}</select>
+      <button class="icon-btn del" title="Remover">✕</button>`;
+    row.querySelector('.tNome').oninput = e=>{ tipo.nome = e.target.value; scheduleSave(); };
+    row.querySelector('.tCat').onchange = e=>{ tipo.categoria = e.target.value; scheduleSave(); render(); };
+    row.querySelector('.tRegra').onchange = e=>{ tipo.regraNotif = e.target.value; scheduleSave(); render(); };
+    row.querySelector('.tSite').onchange = e=>{
+      const v = e.target.value.trim();
+      if(v && !isUrl(v)){ toast('O site precisa começar com http:// ou https://'); e.target.value = tipo.siteEmissao||''; return; }
+      tipo.siteEmissao = v; scheduleSave();
+    };
+    row.querySelector('.del').onclick = ()=>{
+      if(!confirm(`Remover "${tipo.nome}" de todas as instituições? As datas e links já registrados desse tipo serão apagados.`)) return;
+      state.certidaoTipos = state.certidaoTipos.filter(t=>t.id!==tipo.id);
+      state.certidoes = state.certidoes.filter(x=>x.tipoId!==tipo.id);
+      scheduleSave(); render();
+    };
+    l1.appendChild(row);
+  });
+  s1.appendChild(l1);
+  const add1 = document.createElement('button');
+  add1.className='btn ghost small'; add1.style.marginTop='10px'; add1.textContent='+ Adicionar tipo de certidão';
+  add1.textContent='+ Adicionar tipo de certidão / documento';
+  add1.onclick = ()=>openNovoTipoDocModal();
+  s1.appendChild(add1);
+  wrap.appendChild(s1);
+
+  wrap.appendChild(stringListSection('Tipos de tarefa', 'Opções do campo "Tipo" das tarefas. Arraste pelo ⠿ para mudar a ordem.', state.tiposTarefa, '+ Adicionar tipo de tarefa', 'Novo tipo'));
+  wrap.appendChild(stringListSection('Origens de projeto', 'Opções do campo "Origem" dos projetos (prefeitura, estado, federal, ONU…).', state.origensProjeto, '+ Adicionar origem', 'Nova origem'));
+
+  // Equipe
+  const s3 = document.createElement('div'); s3.className='cfg-section';
+  s3.innerHTML = `<h3>Equipe</h3><div class="hint">Quem entra no Gestor aparece aqui automaticamente no primeiro acesso. <b>O login e a senha de cada pessoa são criados na aba "Usuarios" da planilha</b> — o nome aqui precisa ser igual ao da planilha. WhatsApp + chave CallMeBot servem para os avisos automáticos (cada pessoa ativa a própria chave mandando "I allow callmebot to send me messages" para +34 644 84 71 04 no WhatsApp dela).</div>`;
+  const l3 = document.createElement('div'); l3.className='cfg-list';
+  state.membros.forEach(m=>{
+    const row = document.createElement('div'); row.className='cfg-row'; row.style.flexWrap='wrap';
+    row.innerHTML = `
+      ${avatarBadge(m)}
+      <input value="${escapeAttr(m.nome)}" class="mNome" style="flex:1;min-width:120px;" placeholder="Nome">
+      <input value="${escapeAttr(m.whatsapp)}" class="mWpp" placeholder="WhatsApp: 5541999999999" style="flex:1;min-width:160px;">
+      <input value="${escapeAttr(m.callmebotApiKey)}" class="mKey" placeholder="Chave CallMeBot" style="flex:1;min-width:120px;">
+      <button class="icon-btn del" title="Remover">✕</button>`;
+    row.querySelector('.mNome').onchange = e=>{ m.nome = e.target.value.trim() || m.nome; scheduleSave(); render(); updateUserBox(); };
+    row.querySelector('.mWpp').oninput = e=>{ m.whatsapp = e.target.value.replace(/\D/g,''); scheduleSave(); };
+    row.querySelector('.mKey').oninput = e=>{ m.callmebotApiKey = e.target.value.trim(); scheduleSave(); };
+    row.querySelector('.del').onclick = ()=>{ if(!confirm(`Remover ${m.nome} da equipe? (O login dela continua na planilha — apague lá também.)`)) return; state.membros = state.membros.filter(x=>x.id!==m.id); scheduleSave(); render(); };
+    l3.appendChild(row);
+  });
+  s3.appendChild(l3);
+  const add3 = document.createElement('button');
+  add3.className='btn ghost small'; add3.style.marginTop='10px'; add3.textContent='+ Adicionar pessoa';
+  add3.onclick = ()=>{ state.membros.push({id:uid(), nome:'Nova pessoa', whatsapp:'', callmebotApiKey:'', cor: USER_PALETTE[state.membros.length % USER_PALETTE.length]}); scheduleSave(); render(); };
+  s3.appendChild(add3);
+  wrap.appendChild(s3);
+
+  // Notificações
+  const s4 = document.createElement('div'); s4.className='cfg-section';
+  s4.innerHTML = `<h3>Responsáveis pelos avisos</h3><div class="hint">Quem recebe por WhatsApp os avisos de vencimento de cada categoria, conforme a regra de cada tipo (precisa ter WhatsApp e chave preenchidos acima). Podem ser pessoas diferentes.</div>`;
+  const mkSel = (label, key)=>{
+    const w = document.createElement('div'); w.className = 'field'; w.style.marginBottom = '10px';
+    w.innerHTML = `<label>${label}</label>`;
+    const sel = document.createElement('select');
+    sel.style.cssText = 'max-width:320px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--white);';
+    sel.innerHTML = `<option value="">— Ninguém selecionado —</option>` + state.membros.map(m=>`<option value="${m.id}" ${state[key]===m.id?'selected':''}>${escapeHtml(m.nome)}</option>`).join('');
+    sel.onchange = e=>{ state[key] = e.target.value || null; scheduleSave(); };
+    w.appendChild(sel); s4.appendChild(w);
+  };
+  mkSel('📄 Responsável pelas certidões convencionais', 'notifCertidaoMembroId');
+  mkSel('🏛 Responsável pelos documentos institucionais (CMAS, CMDCA, COMTIBA, Ata de Eleição…)', 'notifInstitucionalMembroId');
+  wrap.appendChild(s4);
+
+  c.appendChild(wrap);
+}
+
+/* ================== INICIALIZAÇÃO ================== */
+document.getElementById('fabAdd').onclick = ()=>{
+  if(activeTab==='links') openLinkModal(null);
+  else if(activeTab==='projetos') openProjModal(projFilters.inst || '', null);
+  else if(activeTab==='instituicoes') openInstModal(null);
+  else openTaskModal(null);
+};
+document.getElementById('loginBtn').onclick = doLogin;
+document.getElementById('logoutBtn').onclick = ()=>doLogout();
+document.getElementById('changePassBtn').onclick = openChangePasswordModal;
+['loginPass','loginUser'].forEach(id=>document.getElementById(id).addEventListener('keydown', e=>{ if(e.key==='Enter') doLogin(); }));
+
+async function initApp(){
+  await loadState();
+  updateUserBox();
+}
+
+(function boot(){
+  const saved = sessionStorage.getItem('gp_session');
+  if(saved){
+    try{ session = JSON.parse(saved); hideLogin(); initApp(); return; }catch(e){}
+  }
+  showLogin();
+})();
+</script>
+</body>
+</html>
