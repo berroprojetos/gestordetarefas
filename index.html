@@ -268,7 +268,7 @@
 <script>
 /* ================== CONFIGURAÇÃO ================== */
 // Cole aqui a URL do Web App do Google Apps Script (termina em /exec)
-const API_URL = 'https://script.google.com/macros/s/AKfycbyRPTARNuu6XsreTKxfAS-f87-iXMocJA_PyAKxtzY_STeFyKOpuITqBhQ75it0huIh/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxVL0qFY2Ung1BMZnIKcoDQ2R3JpD4ZFDz5VxCd3ummTCWiX1jxtu6l0x4c7EEz-seq/exec';
 
 /* ================== CONSTANTES ================== */
 const uid = () => Math.random().toString(36).slice(2,10);
@@ -347,6 +347,50 @@ async function apiCall(action, params, method, _isRetry){
   }
 }
 const apiLogin = (usuario, senha)=> apiCall('login', {usuario, senha}, 'POST');
+// Arquivos (PDF das certidões) — guardados no Google Drive da conta dona da planilha.
+// O envio não é repetido automaticamente para não duplicar arquivo (_isRetry = true).
+const apiUploadArquivo = (dados)=> apiCall('uploadArquivo', {token: session.token, ...dados}, 'POST', true);
+const apiBaixarArquivo = (id)=> apiCall('baixarArquivo', {token: session.token, id}, 'POST');
+const apiRemoverArquivo = (id)=> apiCall('removerArquivo', {token: session.token, id}, 'POST');
+const MAX_PDF_MB = 10;
+
+function lerArquivoBase64(file){
+  return new Promise((resolve, reject)=>{
+    const r = new FileReader();
+    r.onload = ()=> resolve(String(r.result).split(',')[1] || '');
+    r.onerror = ()=> reject(new Error('Não foi possível ler o arquivo.'));
+    r.readAsDataURL(file);
+  });
+}
+// Baixa o PDF com o nome certo (ex.: "ABIG - Certidão FGTS - venc 05-12-2026.pdf").
+async function baixarArquivoCertidao(cert){
+  try{
+    toast('Preparando o download…');
+    const res = await apiBaixarArquivo(cert.arquivoId);
+    if(!res.ok) throw new Error(res.error || 'Arquivo não encontrado.');
+    const bytes = Uint8Array.from(atob(res.base64), c=>c.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], {type: res.mime || 'application/pdf'}));
+    const a = document.createElement('a'); a.href = url; a.download = String(res.nome || cert.arquivoNome || 'certidao.pdf').normalize('NFD').replace(/[\u0300-\u036f]/g,''); // sem acentos: alguns navegadores trocam o nome
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 60000);
+  }catch(e){ toast('Não foi possível baixar: ' + e.message); }
+}
+// Abre o PDF guardado no Drive numa nova aba, buscando pelo Gestor (não precisa de acesso ao Drive).
+async function abrirArquivoCertidao(cert){
+  const win = window.open('', '_blank'); // abre já, para o navegador não bloquear
+  if(win) win.document.write('<p style="font-family:sans-serif;padding:20px;">Abrindo o arquivo…</p>');
+  try{
+    const res = await apiBaixarArquivo(cert.arquivoId);
+    if(!res.ok) throw new Error(res.error || 'Arquivo não encontrado.');
+    const bytes = Uint8Array.from(atob(res.base64), c=>c.charCodeAt(0));
+    const url = URL.createObjectURL(new Blob([bytes], {type: res.mime || 'application/pdf'}));
+    if(win) win.location.href = url; else window.open(url, '_blank');
+    setTimeout(()=>URL.revokeObjectURL(url), 120000);
+  }catch(e){
+    if(win) win.close();
+    toast('Não foi possível abrir: ' + e.message);
+  }
+}
 const apiGetData = ()=> apiCall('getData', {token: session.token}, 'POST'); // tudo por POST: nesta publicação, respostas de GET voltam 404
 const apiSaveData = (obj)=> apiCall('saveData', {token: session.token, payload: JSON.stringify(obj)}, 'POST');
 const apiChangePassword = (senhaAtual, novaSenha)=> apiCall('changePassword', {token: session.token, senhaAtual, novaSenha}, 'POST');
@@ -503,7 +547,10 @@ function normalizeState(saved){
     if(ct.categoria!=='certidao' && ct.categoria!=='institucional') ct.categoria = categoriaPadrao(ct.nome);
     if(!REGRAS_NOTIF.some(r=>r[0]===ct.regraNotif)) ct.regraNotif = ct.categoria==='certidao' ? 'dia' : '4meses';
   });
-  s.certidoes.forEach(c=>{ c.naoAplica = !!c.naoAplica; });
+  s.certidoes.forEach(c=>{
+    c.naoAplica = !!c.naoAplica;
+    ['arquivoId','arquivoNome','arquivoEnviadoEm','arquivoEnviadoPor'].forEach(k=>{ if(typeof c[k] !== 'string') c[k] = ''; });
+  });
   s.certidoes.forEach(c=>{ if(typeof c.siteEmissao !== 'string') c.siteEmissao = ''; });
   s.links.forEach(l=>{
     ['titulo','url','categoria','usuario','senha','obs','instituicaoId','projetoId'].forEach(k=>{ if(typeof l[k] !== 'string') l[k] = ''; });
@@ -1994,9 +2041,12 @@ function renderCertidoes(c){
         <div class="foot"><span class="badge ${bc}">${bt}</span>
           <span style="display:flex;gap:4px;">
           ${site ? `<a class="file-link" href="${escapeAttr(site.url)}" target="_blank" rel="noopener noreferrer" title="Abrir o site de emissão (${escapeAttr(site.origem)})">🌐 emitir</a>` : ''}
-          ${cert && cert.link ? `<a class="file-link" href="${escapeAttr(cert.link)}" target="_blank" rel="noopener noreferrer" title="Abrir o arquivo da certidão">📄 abrir</a>` : ''}
+          ${cert && cert.arquivoId ? `<a class="file-link pdfOpen" href="#" title="Abrir o PDF guardado no Gestor">📄 abrir</a>`
+            : cert && cert.link ? `<a class="file-link" href="${escapeAttr(cert.link)}" target="_blank" rel="noopener noreferrer" title="Abrir o arquivo da certidão">📄 abrir</a>` : ''}
           </span></div>`;
+      const po = cell.querySelector('.pdfOpen');
       cell.querySelectorAll('a').forEach(a=>a.onclick = e=>e.stopPropagation());
+      if(po) po.onclick = e=>{ e.preventDefault(); e.stopPropagation(); abrirArquivoCertidao(cert); };
       cell.onclick = ()=>openCertModal(inst.id, tipo.id);
       grid.appendChild(cell);
     });
@@ -2082,23 +2132,90 @@ function openCertModal(instId, tipoId){
         <button type="button" class="btn ghost small" id="c_hoje" style="flex:none;" title="Preencher com a data de hoje">Hoje</button></div></div>
       <div class="field"><label>Próximo vencimento</label><input id="c_prox" type="date" value="${cert.proximoVencimento||''}"></div>
     </div>
-    <div class="field"><label>Link do arquivo da certidão</label>
-      <div style="display:flex;gap:6px;">
-        <input id="c_link" value="${escapeAttr(cert.link||'')}" placeholder="https://... (link do PDF no Drive / SharePoint)" style="flex:1;min-width:0;">
-        ${cert.link?`<a class="btn ghost small" href="${escapeAttr(cert.link)}" target="_blank" rel="noopener noreferrer" style="flex:none;text-decoration:none;">📄 Abrir</a>`:''}
-      </div>
-      <div class="hint" style="margin:4px 0 0;">Cole o link de compartilhamento do arquivo. Assim ele abre direto daqui, sem procurar nas pastas.</div>
+    <div class="field"><label>Arquivo da certidão (PDF)</label>
+      <div id="c_arq_atual"></div>
+      <label id="c_drop" style="display:block;margin-top:8px;border:2px dashed var(--line);border-radius:10px;padding:14px;text-align:center;cursor:pointer;background:var(--white);text-transform:none;letter-spacing:0;font-weight:500;color:var(--ink);font-size:13px;">
+        <input type="file" id="c_file" accept="application/pdf,.pdf" style="display:none;">
+        <span id="c_drop_txt">⬆ Clique ou arraste o PDF aqui para enviar${cert.arquivoId?' (substitui o atual)':''}</span>
+        <div class="hint" style="margin:4px 0 0;">Até ${MAX_PDF_MB} MB. Fica guardado no Google Drive da empresa; só a versão atual é mantida.</div>
+      </label>
     </div>
+    <details ${(!cert.arquivoId && cert.link)?'open':''} style="font-size:13px;">
+      <summary style="cursor:pointer;color:var(--muted);">Usar um link externo em vez do PDF</summary>
+      <div class="field" style="margin-top:8px;">
+        <div style="display:flex;gap:6px;">
+          <input id="c_link" value="${escapeAttr(cert.link||'')}" placeholder="https://... (link do PDF no Drive / SharePoint)" style="flex:1;min-width:0;">
+          ${cert.link?`<a class="btn ghost small" href="${escapeAttr(cert.link)}" target="_blank" rel="noopener noreferrer" style="flex:none;text-decoration:none;">Abrir</a>`:''}
+        </div>
+        <div class="hint" style="margin:4px 0 0;">Se houver um PDF enviado, ele tem prioridade sobre o link.</div>
+      </div>
+    </details>
     <div class="modal-actions">
       <div>${!isNew?`<button class="btn danger small" id="c_del">Limpar registro</button>`:''}</div>
       <div style="display:flex;gap:8px;"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="c_save">Salvar</button></div>
     </div>`, 520);
   const q = s=>overlay.querySelector(s);
   if(q('#c_cnpj')) q('#c_cnpj').onclick = ()=>copyText(inst.cnpj, 'CNPJ copiado!');
+
+  // ---- PDF ----
+  function renderArqAtual(){
+    const box = q('#c_arq_atual');
+    if(!cert.arquivoId){ box.innerHTML = `<div class="hint" style="margin:0;">Nenhum PDF enviado ainda.</div>`; return; }
+    box.innerHTML = `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border:1px solid var(--line-soft);border-radius:8px;background:var(--teal-soft);">
+      <span style="flex:1;min-width:0;font-size:13px;word-break:break-all;">📄 <b>${escapeHtml(cert.arquivoNome||'certidão.pdf')}</b><br>
+      <span class="small muted">enviado ${cert.arquivoEnviadoEm?fmtDateTime(cert.arquivoEnviadoEm):''}${cert.arquivoEnviadoPor?' por '+escapeHtml(cert.arquivoEnviadoPor):''}</span></span>
+      <button type="button" class="btn small" id="c_pdf_open">Abrir</button>
+      <button type="button" class="btn ghost small" id="c_pdf_down">Baixar</button>
+      <button type="button" class="btn ghost small" id="c_pdf_del" title="Remover o PDF">Remover</button></div>`;
+    q('#c_pdf_open').onclick = ()=>abrirArquivoCertidao(cert);
+    q('#c_pdf_down').onclick = ()=>baixarArquivoCertidao(cert);
+    q('#c_pdf_del').onclick = async ()=>{
+      if(!confirm('Remover o PDF desta certidão? Ele vai para a lixeira do Drive (pode ser recuperado por 30 dias).')) return;
+      try{ const r = await apiRemoverArquivo(cert.arquivoId); if(!r.ok) throw new Error(r.error); }
+      catch(e){ toast('Não foi possível remover: ' + e.message); return; }
+      Object.assign(cert, {arquivoId:'', arquivoNome:'', arquivoEnviadoEm:'', arquivoEnviadoPor:''});
+      scheduleSave(); renderArqAtual(); render(); toast('PDF removido.');
+    };
+  }
+  renderArqAtual();
+  let enviando = false;
+  async function enviarPdf(file){
+    if(!file || enviando) return;
+    const isPdf = file.type==='application/pdf' || /\.pdf$/i.test(file.name);
+    if(!isPdf){ toast('Envie um arquivo PDF.'); return; }
+    if(file.size > MAX_PDF_MB*1024*1024){ toast(`O arquivo tem mais de ${MAX_PDF_MB} MB.`); return; }
+    const venc = q('#c_prox').value;
+    enviando = true;
+    const txt = q('#c_drop_txt'), old = txt.textContent;
+    txt.textContent = '⏳ Enviando ' + file.name + '…';
+    try{
+      const base64 = await lerArquivoBase64(file);
+      const me = currentMembro();
+      const res = await apiUploadArquivo({
+        base64, mime:'application/pdf', nomeOriginal:file.name,
+        pasta: instLabel(inst), tipo: tipo.nome, venc, anteriorId: cert.arquivoId || ''
+      });
+      if(!res.ok) throw new Error(res.error || 'falha no envio');
+      Object.assign(cert, {arquivoId:res.id, arquivoNome:res.nome, arquivoEnviadoEm:new Date().toISOString(), arquivoEnviadoPor: me?me.nome:(session?session.nome:'')});
+      if(isNew && !state.certidoes.includes(cert)) state.certidoes.push(cert);
+      scheduleSave(); renderArqAtual(); render();
+      txt.textContent = '⬆ Clique ou arraste o PDF aqui para enviar (substitui o atual)';
+      toast('PDF salvo no Drive.' + (venc ? '' : ' Confira o vencimento e clique em Salvar.'));
+    }catch(e){
+      txt.textContent = old;
+      toast('Não foi possível enviar: ' + e.message);
+    }finally{ enviando = false; }
+  }
+  q('#c_file').onchange = e=>{ enviarPdf(e.target.files[0]); e.target.value=''; };
+  const drop = q('#c_drop');
+  drop.addEventListener('dragover', e=>{ e.preventDefault(); drop.style.borderColor='var(--teal)'; });
+  drop.addEventListener('dragleave', ()=>{ drop.style.borderColor=''; });
+  drop.addEventListener('drop', e=>{ e.preventDefault(); drop.style.borderColor=''; enviarPdf(e.dataTransfer.files[0]); });
   q('#c_hoje').onclick = ()=>{ q('#c_ult').value = todayStr(); };
   if(!isNew){
     q('#c_del').onclick = ()=>{
-      if(!confirm('Apagar as datas e o link desta certidão?')) return;
+      if(!confirm('Apagar as datas, o link e o PDF desta certidão?' + (cert.arquivoId?' O PDF vai para a lixeira do Drive (pode ser recuperado por 30 dias).':''))) return;
+      if(cert.arquivoId) apiRemoverArquivo(cert.arquivoId).catch(()=>{});
       state.certidoes = state.certidoes.filter(x=>x.id!==cert.id);
       scheduleSave(); overlay.remove(); render(); toast('Registro removido.');
     };
@@ -2115,7 +2232,7 @@ function openCertModal(instId, tipoId){
     cert.link = link;
     cert.siteEmissao = siteEsp;
     cert.naoAplica = q('#c_na').checked;
-    if(isNew) state.certidoes.push(cert);
+    if(isNew && !state.certidoes.includes(cert)) state.certidoes.push(cert); // pode já ter entrado ao enviar o PDF
     scheduleSave(); overlay.remove(); render(); toast('Certidão atualizada.');
   };
 }
