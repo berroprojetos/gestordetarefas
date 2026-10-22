@@ -268,7 +268,7 @@
 <script>
 /* ================== CONFIGURAÇÃO ================== */
 // Cole aqui a URL do Web App do Google Apps Script (termina em /exec)
-const API_URL = 'https://script.google.com/macros/s/AKfycbxVL0qFY2Ung1BMZnIKcoDQ2R3JpD4ZFDz5VxCd3ummTCWiX1jxtu6l0x4c7EEz-seq/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwgqmcnbEwr2exQFc8CKfMmZgnNzX9E8WZC3h7w7NwlsMgkNbVD9cBshFOJITmAB6B-/exec';
 
 /* ================== CONSTANTES ================== */
 const uid = () => Math.random().toString(36).slice(2,10);
@@ -1714,10 +1714,10 @@ function renderInstituicoes(c){
     c.innerHTML = `<div class="empty-state"><div class="big">Nenhuma instituição cadastrada</div><div>Use "+ Nova instituição" para cadastrar a primeira, com os dados da instituição, do representante legal e do contador.</div></div>`;
     return;
   }
-  const kv = (label, value)=>{
+  const kv = (label, value, copyVal)=>{ // copyVal: o que vai para a área de transferência (se diferente do exibido)
     const has = !!String(value||'').trim();
     return `<div class="kv"><span class="k">${label}</span><span class="v ${has?'':'empty'}">${has?escapeHtml(value):'não informado'}</span>
-      ${has?`<button class="icon-btn cp" data-copy="${escapeAttr(value)}" data-label="${escapeAttr(label)}" title="Copiar ${escapeAttr(label)}">📋</button>`:''}</div>`;
+      ${has?`<button class="icon-btn cp" data-copy="${escapeAttr(copyVal!==undefined?copyVal:value)}" data-label="${escapeAttr(label)}" title="Copiar ${escapeAttr(label)}">📋</button>`:''}</div>`;
   };
   state.instituicoes.forEach(inst=>{
     const r = inst.rep, ct = inst.contador;
@@ -1735,7 +1735,7 @@ function renderInstituicoes(c){
       </div>
       <div class="inst-body">
         <div class="kv-col"><h4>Dados da instituição</h4>
-          ${kv('Nome', inst.nome)}${kv('Sigla', inst.sigla)}${kv('CNPJ', inst.cnpj)}${kv('E-mail', inst.email)}${kv('Telefone', inst.telefone)}
+          ${kv('Nome', inst.nome)}${kv('Sigla', inst.sigla)}${kv('CNPJ', inst.cnpj, onlyDigits(inst.cnpj))}${kv('E-mail', inst.email)}${kv('Telefone', inst.telefone)}
           ${kv('Endereço', formatEnd(inst.end))}${kv('Data de inscrição', inst.dataInscricao?fmtDate(inst.dataInscricao):'')}
         </div>
         <div class="kv-col"><h4>Representante legal</h4>
@@ -2014,7 +2014,7 @@ function renderCertidoes(c){
       <div class="inst-head">
         <span class="inst-swatch" style="background:${inst.cor}"></span>
         <h3 title="${escapeAttr(inst.nome)}">${escapeHtml(instLabel(inst))}</h3>
-        ${inst.cnpj?`<button class="icon-btn cpCnpj mono small" title="Copiar CNPJ">📋 ${escapeHtml(inst.cnpj)}</button>`:''}
+        ${inst.cnpj?`<button class="icon-btn cpCnpj mono small" title="Copiar CNPJ (só números)">📋 ${escapeHtml(onlyDigits(inst.cnpj))}</button>`:''}
         <div class="stats">
           ${ok?`<span style="color:var(--ok)">${ok} em dia</span>`:''}
           ${warn?`<span style="color:var(--warn)">${warn} vencendo</span>`:''}
@@ -2023,7 +2023,7 @@ function renderCertidoes(c){
         </div>
       </div>`;
     const cp = block.querySelector('.cpCnpj');
-    if(cp) cp.onclick = ()=>copyText(inst.cnpj, `CNPJ de ${instLabel(inst)} copiado!`);
+    if(cp) cp.onclick = ()=>copyText(onlyDigits(inst.cnpj), `CNPJ de ${instLabel(inst)} copiado (só números)!`);
     const grid = document.createElement('div');
     grid.className='cert-grid';
     state.certidaoTipos.forEach(tipo=>{
@@ -2100,7 +2100,7 @@ function openCertModal(instId, tipoId){
   const overlay = makeModal(escapeHtml(tipo.nome), `
     <div class="hint" style="margin:-8px 0 0;display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
       <span>${escapeHtml(inst.nome)}${inst.sigla?` (${escapeHtml(inst.sigla)})`:''}</span>
-      ${inst.cnpj?`<button type="button" class="icon-btn mono small" id="c_cnpj" title="Copiar CNPJ">📋 ${escapeHtml(inst.cnpj)}</button>`:''}
+      ${inst.cnpj?`<button type="button" class="icon-btn mono small" id="c_cnpj" title="Copiar CNPJ (só números)">📋 ${escapeHtml(onlyDigits(inst.cnpj))}</button>`:''}
       ${status}
     </div>
     <div class="hint" style="margin:-6px 0 0;">
@@ -2155,7 +2155,7 @@ function openCertModal(instId, tipoId){
       <div style="display:flex;gap:8px;"><button class="btn ghost" data-close>Cancelar</button><button class="btn" id="c_save">Salvar</button></div>
     </div>`, 520);
   const q = s=>overlay.querySelector(s);
-  if(q('#c_cnpj')) q('#c_cnpj').onclick = ()=>copyText(inst.cnpj, 'CNPJ copiado!');
+  if(q('#c_cnpj')) q('#c_cnpj').onclick = ()=>copyText(onlyDigits(inst.cnpj), 'CNPJ copiado (só números)!');
 
   // ---- PDF ----
   function renderArqAtual(){
